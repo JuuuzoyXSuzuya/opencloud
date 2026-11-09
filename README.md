@@ -178,10 +178,10 @@ adb uninstall com.zhiliaoapp.musically
 adb install -r /path/to/tiktok-opencloud.apk
 ```
 
-Then open TikTok → **Settings**: the first row is **"Выбор региона"**. Tap it,
-pick a country and operator and press **"Сохранить"**. The same screen is also
-available from the separate **OpenCloud** launcher icon. If no profile is
-chosen, the build default is used.
+Then open TikTok → **Settings**: the first row is **"Настройки OpenCloud"**.
+Tap it, pick a country and operator and press **"Сохранить"**. The same screen
+is also available from the separate **OpenCloud** launcher icon. If no profile
+is chosen, the build default is used.
 
 ## Country table
 
