@@ -1,0 +1,222 @@
+nl	Netherlands	20408	KPN
+nl	Netherlands	20404	Vodafone
+nl	Netherlands	20416	T-Mobile
+nl	Netherlands	20402	Tele2
+de	Germany	26201	Telekom
+de	Germany	26202	Vodafone
+de	Germany	26207	O2
+de	Germany	26223	1&1
+fr	France	20801	Orange
+fr	France	20810	SFR
+fr	France	20820	Bouygues
+fr	France	20815	Free
+gb	United Kingdom	23430	EE
+gb	United Kingdom	23410	O2
+gb	United Kingdom	23415	Vodafone
+gb	United Kingdom	23420	Three
+ie	Ireland	27201	Vodafone
+ie	Ireland	27205	Three
+ie	Ireland	27203	Eir
+es	Spain	21407	Movistar
+es	Spain	21401	Vodafone
+es	Spain	21403	Orange
+es	Spain	21404	Yoigo
+pt	Portugal	26801	Vodafone
+pt	Portugal	26803	NOS
+pt	Portugal	26806	MEO
+it	Italy	22201	TIM
+it	Italy	22210	Vodafone
+it	Italy	22288	WindTre
+it	Italy	22250	Iliad
+be	Belgium	20601	Proximus
+be	Belgium	20610	Orange
+be	Belgium	20620	BASE
+be	Belgium	20605	Telenet
+lu	Luxembourg	27001	POST
+lu	Luxembourg	27077	Tango
+lu	Luxembourg	27099	Orange
+ch	Switzerland	22801	Swisscom
+ch	Switzerland	22802	Sunrise
+ch	Switzerland	22803	Salt
+at	Austria	23201	A1
+at	Austria	23203	Magenta
+at	Austria	23205	Drei
+dk	Denmark	23801	TDC
+dk	Denmark	23802	Telenor
+dk	Denmark	23820	Telia
+dk	Denmark	23806	3
+se	Sweden	24001	Telia
+se	Sweden	24007	Tele2
+se	Sweden	24008	Telenor
+se	Sweden	24010	Tre
+no	Norway	24201	Telenor
+no	Norway	24202	Telia
+no	Norway	24206	Ice
+fi	Finland	24405	Elisa
+fi	Finland	24491	Telia
+fi	Finland	24412	DNA
+is	Iceland	27401	Siminn
+is	Iceland	27402	Vodafone
+is	Iceland	27411	Nova
+pl	Poland	26003	Orange
+pl	Poland	26006	Play
+pl	Poland	26002	T-Mobile
+pl	Poland	26001	Plus
+cz	Czechia	23001	T-Mobile
+cz	Czechia	23002	O2
+cz	Czechia	23003	Vodafone
+sk	Slovakia	23102	Telekom
+sk	Slovakia	23101	Orange
+sk	Slovakia	23106	O2
+hu	Hungary	21630	Telekom
+hu	Hungary	21670	Vodafone
+hu	Hungary	21601	Yettel
+hu	Hungary	21603	Digi
+ro	Romania	22601	Vodafone
+ro	Romania	22610	Orange
+ro	Romania	22603	Telekom
+ro	Romania	22605	Digi
+bg	Bulgaria	28401	A1
+bg	Bulgaria	28403	Vivacom
+bg	Bulgaria	28405	Yettel
+gr	Greece	20201	Cosmote
+gr	Greece	20205	Vodafone
+gr	Greece	20209	Nova
+hr	Croatia	21901	HT
+hr	Croatia	21910	A1
+hr	Croatia	21902	Telemach
+si	Slovenia	29341	Mobitel
+si	Slovenia	29340	A1
+si	Slovenia	29364	Telemach
+rs	Serbia	22001	Yettel
+rs	Serbia	22005	A1
+rs	Serbia	22003	mts
+ba	Bosnia and Herzegovina	21890	BH Mobile
+ba	Bosnia and Herzegovina	21805	m:tel
+ba	Bosnia and Herzegovina	21803	HT Eronet
+me	Montenegro	29702	telekom.me
+me	Montenegro	29701	One
+me	Montenegro	29703	m:tel
+mk	North Macedonia	29401	Telekom
+mk	North Macedonia	29402	A1
+mk	North Macedonia	29404	Lycamobile
+al	Albania	27602	Vodafone
+al	Albania	27601	One
+al	Albania	27603	ALBtelecom
+ee	Estonia	24802	Elisa
+ee	Estonia	24801	Telia
+ee	Estonia	24803	Tele2
+lv	Latvia	24701	LMT
+lv	Latvia	24702	Tele2
+lv	Latvia	24705	Bite
+lt	Lithuania	24601	Telia
+lt	Lithuania	24603	Tele2
+lt	Lithuania	24602	Bite
+md	Moldova	25901	Orange
+md	Moldova	25902	Moldcell
+md	Moldova	25905	Unite
+ua	Ukraine	25502	Kyivstar
+ua	Ukraine	25501	Vodafone
+ua	Ukraine	25506	lifecell
+ua	Ukraine	25507	3Mob
+by	Belarus	25701	A1
+by	Belarus	25702	MTS
+by	Belarus	25704	life
+ru	Russia	25001	MTS
+ru	Russia	25002	MegaFon
+ru	Russia	25099	Beeline
+ru	Russia	25020	Tele2
+ru	Russia	25011	Yota
+ge	Georgia	28201	Geocell
+ge	Georgia	28202	Magti
+ge	Georgia	28205	Beeline
+am	Armenia	28305	VivaCell-MTS
+am	Armenia	28301	Beeline
+am	Armenia	28310	Ucom
+az	Azerbaijan	40001	Azercell
+az	Azerbaijan	40002	Bakcell
+az	Azerbaijan	40004	Nar
+kz	Kazakhstan	40102	Kcell
+kz	Kazakhstan	40101	Beeline
+kz	Kazakhstan	40177	Tele2
+kz	Kazakhstan	40108	Altel
+kg	Kyrgyzstan	43701	Beeline
+kg	Kyrgyzstan	43703	MegaCom
+kg	Kyrgyzstan	43705	O!
+uz	Uzbekistan	43405	Ucell
+uz	Uzbekistan	43404	Beeline
+uz	Uzbekistan	43407	Uzmobile
+tj	Tajikistan	43601	Tcell
+tj	Tajikistan	43605	Beeline
+tj	Tajikistan	43602	MegaFon
+tm	Turkmenistan	43802	TM-Cell
+tm	Turkmenistan	43801	Beeline
+tm	Turkmenistan	43803	MTS
+us	United States	310410	AT&T
+us	United States	310260	T-Mobile
+us	United States	310012	Verizon
+us	United States	311220	US Cellular
+ca	Canada	302220	Telus
+ca	Canada	302720	Rogers
+ca	Canada	302610	Bell
+ca	Canada	302490	Freedom
+mx	Mexico	334020	Telcel
+mx	Mexico	334050	AT&T
+mx	Mexico	334030	Movistar
+br	Brazil	72406	Vivo
+br	Brazil	72405	Claro
+br	Brazil	72404	TIM
+br	Brazil	72431	Oi
+ar	Argentina	722310	Claro
+ar	Argentina	722070	Movistar
+ar	Argentina	722341	Personal
+cl	Chile	73001	Entel
+cl	Chile	73002	Movistar
+cl	Chile	73003	Claro
+cl	Chile	73004	WOM
+co	Colombia	732101	Claro
+co	Colombia	732123	Movistar
+co	Colombia	732103	Tigo
+pe	Peru	71610	Claro
+pe	Peru	71606	Movistar
+pe	Peru	71617	Entel
+uy	Uruguay	74801	Antel
+uy	Uruguay	74807	Movistar
+uy	Uruguay	74810	Claro
+ec	Ecuador	74001	Claro
+ec	Ecuador	74000	Movistar
+ec	Ecuador	74002	CNT
+tr	Turkey	28601	Turkcell
+tr	Turkey	28602	Vodafone
+tr	Turkey	28603	Turk Telekom
+il	Israel	42502	Cellcom
+il	Israel	42501	Partner
+il	Israel	42503	Pelephone
+il	Israel	42507	Hot Mobile
+ae	United Arab Emirates	42402	Etisalat
+ae	United Arab Emirates	42403	du
+sa	Saudi Arabia	42001	STC
+sa	Saudi Arabia	42003	Mobily
+sa	Saudi Arabia	42004	Zain
+in	India	405840	Jio
+in	India	40410	Airtel
+in	India	40420	Vi
+in	India	40464	BSNL
+jp	Japan	44020	SoftBank
+jp	Japan	44010	NTT docomo
+jp	Japan	44050	au
+jp	Japan	44011	Rakuten
+kr	South Korea	45005	SK Telecom
+kr	South Korea	45008	KT
+kr	South Korea	45006	LG U+
+cn	China	46000	China Mobile
+cn	China	46001	China Unicom
+cn	China	46003	China Telecom
+za	South Africa	65501	Vodacom
+za	South Africa	65510	MTN
+za	South Africa	65502	Telkom
+za	South Africa	65507	Cell C
+eg	Egypt	60201	Orange
+eg	Egypt	60202	Vodafone
+eg	Egypt	60203	Etisalat
+eg	Egypt	60204	WE
