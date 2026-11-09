@@ -133,7 +133,7 @@ public final class SettingsActivity extends Activity {
         cardHint.setPadding(0, pixels(6), 0, 0);
         card.addView(cardHint);
 
-        column.addView(section("Плагины"));
+        column.addView(section("Функции"));
 
         TextView pluginIntro = new TextView(this);
         pluginIntro.setText("Дополнительные функции. Переключатели применяются сразу, "

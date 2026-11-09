@@ -52,7 +52,7 @@ every bridge method calls the real framework method again.
 
 ## Plugins
 
-The OpenCloud screen has a **"Плагины"** section. A plugin is either:
+The OpenCloud screen has a **"Функции"** section. A plugin is either:
 
 - **runtime** — a switch stored in OpenCloud's preferences. The patched code
   reads it on every call, so it applies immediately without a rebuild;
