@@ -34,6 +34,10 @@ TikTok first, then install the OpenCloud build. A second launcher icon named
 - Removes `assets/dexopt/baseline.prof` and `.profm`, because they describe
   the original dex files and are no longer valid after patching.
 - Aligns and signs the result.
+- Ships a small plugin system in the OpenCloud screen. The first runtime
+  plugin is **Dark theme**, which forces TikTok's dark appearance even when the
+  system is in light mode. Region spoofing is exposed there as well; the Google
+  browser login and the TikTok settings row are shown as build-time modules.
 
 TikTok's own settings screen gets a **"Выбор региона"** row pinned above the
 list (the fragment's view is wrapped by `SettingsEntry.decorate`; no Compose
@@ -45,6 +49,34 @@ icon still works as a fallback.
 
 The toggle in the settings screen is reversible at runtime: when it is off,
 every bridge method calls the real framework method again.
+
+## Plugins
+
+The OpenCloud screen has a **"Плагины"** section. A plugin is either:
+
+- **runtime** — a switch stored in OpenCloud's preferences. The patched code
+  reads it on every call, so it applies immediately without a rebuild;
+- **build-time** — a module baked into the APK by the patcher and shown in the
+  list for reference (currently the browser Google login and the TikTok
+  settings row).
+
+Runtime plugins available now:
+
+| Plugin | What it does |
+|---|---|
+| Dark theme | Rewrites `LX/005C.LJJIII(int)`, TikTok's central appearance entry point, so every requested mode becomes dark (2). Turning it off restores the mode stored in TikTok's own `sp_dark_mode` preference. |
+
+To add a runtime plugin:
+
+1. add a `Plugins.Descriptor` with `runtime = true` in
+   `java/dev/opencloud/region/Plugins.java`;
+2. read `Plugins.isEnabled(context, id)` from the code that implements it;
+3. if the hook lives in TikTok's own smali, add a `MethodOverride` in
+   `opencloud/patcher.py` that calls into the bridge. Java-side plugins can
+   call `Plugins` directly.
+
+The patcher logs every applied override, and `--strict` fails the build if an
+override is missing.
 
 ## What it does not do
 

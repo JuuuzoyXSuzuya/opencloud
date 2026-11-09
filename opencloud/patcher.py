@@ -130,10 +130,70 @@ GOOGLE_WEB_BODY = """\
     return-object v0
 .end method"""
 
+# LX/005C.LJJIII(int) is TikTok's central "apply appearance" entry point.
+# 0 = follow system, 1 = light, 2 = dark, 3 = scheduled.  The body below is the
+# original implementation with one hook at the top: ThemePlugin.mode() turns
+# every requested value into 2 while the dark-theme plugin is enabled, then the
+# original listener notification runs unchanged.
+THEME_BODY = """\
+.method public static LJJIII(I)V
+    .locals 2
+
+    invoke-static {p0}, Ldev/opencloud/region/ThemePlugin;->mode(I)I
+    move-result p0
+
+    const/4 v0, -0x1
+    if-eq p0, v0, :cond_1
+    if-eqz p0, :cond_1
+    const/4 v0, 0x1
+    if-eq p0, v0, :cond_1
+    const/4 v0, 0x2
+    if-eq p0, v0, :cond_1
+    const/4 v0, 0x3
+    if-eq p0, v0, :cond_1
+    :cond_0
+    return-void
+    :cond_1
+    sget v0, LX/005C;->LLJJI:I
+    if-eq v0, p0, :cond_0
+    sput p0, LX/005C;->LLJJI:I
+    sget-object p0, LX/005C;->LLJJJIL:Ljava/lang/Object;
+    monitor-enter p0
+    :try_start_0
+    sget-object v0, LX/005C;->LLJJJ:LX/02eX;
+    invoke-virtual {v0}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
+    new-instance v1, LX/026m;
+    invoke-direct {v1, v0}, LX/026m;-><init>(LX/02eX;)V
+    :cond_2
+    :goto_0
+    invoke-virtual {v1}, LX/01h5;->hasNext()Z
+    move-result v0
+    if-eqz v0, :cond_3
+    invoke-virtual {v1}, LX/01h5;->next()Ljava/lang/Object;
+    move-result-object v0
+    check-cast v0, Ljava/lang/ref/WeakReference;
+    invoke-virtual {v0}, Ljava/lang/ref/Reference;->get()Ljava/lang/Object;
+    move-result-object v0
+    check-cast v0, LX/005C;
+    if-eqz v0, :cond_2
+    invoke-virtual {v0}, LX/005C;->LIZLLL()Z
+    goto :goto_0
+    :cond_3
+    monitor-exit p0
+    return-void
+    :catchall_0
+    move-exception v0
+    monitor-exit p0
+    :try_end_0
+    .catchall {:try_start_0 .. :try_end_0} :catchall_0
+    throw v0
+.end method"""
+
 
 METHOD_OVERRIDES: tuple[MethodOverride, ...] = (
     MethodOverride("LX/1DZZ;", "LJFF",
                    "(Ljava/lang/String;)Ljava/lang/String;", GOOGLE_WEB_BODY),
+    MethodOverride("LX/005C;", "LJJIII", "(I)V", THEME_BODY),
 )
 
 

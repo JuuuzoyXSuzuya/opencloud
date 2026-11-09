@@ -24,38 +24,60 @@ import java.util.List;
 /**
  * The only screen OpenCloud adds.  It is built in code so the patcher never
  * has to add or rewrite a single resource in TikTok's resource table.
+ *
+ * The screen follows the same dark/light choice as the dark-theme plugin:
+ * when the plugin is on the whole OpenCloud UI is dark, otherwise it uses the
+ * system night mode.
  */
 public final class SettingsActivity extends Activity {
     private CheckBox toggle;
     private TextView summary;
 
+    private boolean dark;
+    private int colorBg;
+    private int colorFg;
+    private int colorMuted;
+    private int colorCard;
+    private int colorStroke;
+    private int colorAccent;
+
     @Override
     protected void onCreate(Bundle saved) {
+        dark = detectDark();
+        setTheme(dark ? android.R.style.Theme_DeviceDefault
+                : android.R.style.Theme_DeviceDefault_Light);
         super.onCreate(saved);
-        setTheme(android.R.style.Theme_DeviceDefault_Light);
         setTitle("OpenCloud");
+        applyPalette();
 
         int edge = pixels(20);
         LinearLayout column = new LinearLayout(this);
         column.setOrientation(1); // vertical
         column.setPadding(edge, edge, edge, edge);
+        column.setBackgroundColor(colorBg);
 
         TextView title = new TextView(this);
         title.setText("OpenCloud");
         title.setTextSize(26);
         title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setTextColor(colorFg);
         column.addView(title);
 
         TextView intro = new TextView(this);
-        intro.setText("Регион и оператор, которые будет видеть TikTok.");
+        intro.setText("Регион, тема и дополнительные функции для TikTok.");
         intro.setTextSize(14);
+        intro.setTextColor(colorMuted);
         spacing(intro, pixels(6));
         column.addView(intro);
 
+        TextView regionTitle = section("Регион");
+        column.addView(regionTitle);
+
         toggle = new CheckBox(this);
         toggle.setText("Использовать профиль региона");
+        toggle.setTextColor(colorFg);
         toggle.setChecked(Config.isOn(this));
-        spacing(toggle, pixels(18));
+        spacing(toggle, pixels(10));
         toggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton button, boolean checked) {
@@ -69,9 +91,9 @@ public final class SettingsActivity extends Activity {
         card.setOrientation(1);
         card.setPadding(pixels(16), pixels(16), pixels(16), pixels(16));
         GradientDrawable background = new GradientDrawable();
-        background.setColor(0xFFF0F1F3);
+        background.setColor(colorCard);
         background.setCornerRadius(pixels(12));
-        background.setStroke(pixels(1), 0xFFD0D3D8);
+        background.setStroke(pixels(1), colorStroke);
         card.setBackground(background);
         card.setClickable(true);
         card.setFocusable(true);
@@ -81,38 +103,141 @@ public final class SettingsActivity extends Activity {
                 showRegionDialog();
             }
         });
-        spacing(card, pixels(18));
+        spacing(card, pixels(12));
         column.addView(card);
 
         TextView cardTitle = new TextView(this);
         cardTitle.setText("Выбор региона");
         cardTitle.setTextSize(18);
         cardTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        cardTitle.setTextColor(colorFg);
         card.addView(cardTitle);
 
         summary = new TextView(this);
         summary.setTextSize(14);
+        summary.setTextColor(colorFg);
         summary.setPadding(0, pixels(6), 0, 0);
         card.addView(summary);
 
         TextView cardHint = new TextView(this);
         cardHint.setText("Нажмите, чтобы выбрать страну и оператора.");
         cardHint.setTextSize(12);
+        cardHint.setTextColor(colorMuted);
         cardHint.setPadding(0, pixels(6), 0, 0);
         card.addView(cardHint);
+
+        column.addView(section("Плагины"));
+
+        TextView pluginIntro = new TextView(this);
+        pluginIntro.setText("Дополнительные функции. Переключатели применяются сразу, "
+                + "без пересборки APK.");
+        pluginIntro.setTextSize(13);
+        pluginIntro.setTextColor(colorMuted);
+        spacing(pluginIntro, pixels(2));
+        column.addView(pluginIntro);
+
+        Plugins.Descriptor[] plugins = Plugins.all();
+        for (int i = 0; i < plugins.length; i++) {
+            column.addView(pluginRow(plugins[i]));
+        }
 
         TextView note = new TextView(this);
         note.setText("Профиль читается при каждом вызове, поэтому следующая проверка телефонии уже "
                 + "использует новые значения. Если TikTok показывает старое — закройте и откройте его.");
         note.setTextSize(13);
-        spacing(note, pixels(18));
+        note.setTextColor(colorMuted);
+        spacing(note, pixels(20));
         column.addView(note);
 
         ScrollView frame = new ScrollView(this);
+        frame.setBackgroundColor(colorBg);
         frame.addView(column);
         setContentView(frame);
         applyInsets(frame, column, edge);
         updateSummary();
+    }
+
+    private boolean detectDark() {
+        try {
+            if (Plugins.darkTheme(this)) {
+                return true;
+            }
+        } catch (Throwable ignored) {
+            // Fall through to the system setting.
+        }
+        int mode = getResources().getConfiguration().uiMode
+                & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+        return mode == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    private void applyPalette() {
+        if (dark) {
+            colorBg = 0xFF101014;
+            colorFg = 0xFFF2F3F7;
+            colorMuted = 0xFF9BA1AD;
+            colorCard = 0xFF1B1C22;
+            colorStroke = 0xFF2C2E38;
+            colorAccent = 0xFF22D3EE;
+        } else {
+            colorBg = 0xFFF6F7F9;
+            colorFg = 0xFF17181C;
+            colorMuted = 0xFF5C6270;
+            colorCard = 0xFFF0F1F3;
+            colorStroke = 0xFFD0D3D8;
+            colorAccent = 0xFF0E7490;
+        }
+    }
+
+    private TextView section(String label) {
+        TextView view = new TextView(this);
+        view.setText(label);
+        view.setTextSize(12);
+        view.setTypeface(Typeface.DEFAULT_BOLD);
+        view.setTextColor(colorAccent);
+        view.setAllCaps(true);
+        view.setLetterSpacing(0.12f);
+        spacing(view, pixels(26));
+        return view;
+    }
+
+    private View pluginRow(final Plugins.Descriptor plugin) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(1);
+        row.setPadding(0, pixels(10), 0, pixels(4));
+
+        if (plugin.runtime) {
+            CheckBox box = new CheckBox(this);
+            box.setText(plugin.title);
+            box.setTextSize(16);
+            box.setTextColor(colorFg);
+            box.setChecked(Plugins.isEnabled(this, plugin.id));
+            box.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                @Override
+                public void onCheckedChanged(CompoundButton button, boolean checked) {
+                    Plugins.setEnabled(SettingsActivity.this, plugin.id, checked);
+                    if (Plugins.DARK_THEME.equals(plugin.id)) {
+                        ThemePlugin.refresh();
+                    }
+                    recreate();
+                }
+            });
+            row.addView(box);
+        } else {
+            TextView label = new TextView(this);
+            label.setText(plugin.title + "  ✓");
+            label.setTextSize(16);
+            label.setTypeface(Typeface.DEFAULT_BOLD);
+            label.setTextColor(colorFg);
+            row.addView(label);
+        }
+
+        TextView description = new TextView(this);
+        description.setText(plugin.description);
+        description.setTextSize(13);
+        description.setTextColor(colorMuted);
+        description.setPadding(pixels(2), 0, 0, 0);
+        row.addView(description);
+        return row;
     }
 
     /**
@@ -175,6 +300,7 @@ public final class SettingsActivity extends Activity {
 
         TextView countryLabel = new TextView(this);
         countryLabel.setText("Страна");
+        countryLabel.setTextColor(colorFg);
         countryLabel.setTypeface(Typeface.DEFAULT_BOLD);
         content.addView(countryLabel);
 
@@ -189,6 +315,7 @@ public final class SettingsActivity extends Activity {
 
         TextView operatorLabel = new TextView(this);
         operatorLabel.setText("Оператор");
+        operatorLabel.setTextColor(colorFg);
         operatorLabel.setTypeface(Typeface.DEFAULT_BOLD);
         spacing(operatorLabel, pixels(18));
         content.addView(operatorLabel);
@@ -241,7 +368,9 @@ public final class SettingsActivity extends Activity {
         });
         refreshOperators.run();
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this,
+                dark ? android.R.style.Theme_DeviceDefault_Dialog_Alert
+                        : android.R.style.Theme_DeviceDefault_Light_Dialog_Alert);
         builder.setTitle("Выбор региона");
         builder.setView(content);
         builder.setPositiveButton("Сохранить", new DialogInterface.OnClickListener() {
