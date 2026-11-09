@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="OpenCloud avatar (circle)">
+  <defs>
+    <linearGradient id="g" x1="80" y1="40" x2="980" y2="1000" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4F46E5"/>
+      <stop offset="1" stop-color="#06B6D4"/>
+    </linearGradient>
+    <radialGradient id="hl" cx="0.205" cy="0.146" r="0.742">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.17"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="c">
+      <circle cx="512" cy="512" r="512"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#c)">
+    <rect width="1024" height="1024" fill="url(#g)"/>
+    <rect width="1024" height="1024" fill="url(#hl)"/>
+    <g transform="translate(69.2 94.4) scale(0.9)">
+      <path d="M320 712 C214 712 132 636 132 542 C132 454 196 384 280 372 C310 280 396 216 496 216 C594 216 678 284 706 376 C788 388 852 456 852 546 C852 640 774 712 672 712 Z" fill="#FFFFFF"/>
+    </g>
+    <path d="M512 636 C420 522 412 496 412 464 C412 348 612 348 612 464 C612 496 604 522 512 636 Z" fill="#FF7A1A"/>
+    <circle cx="512" cy="464" r="40" fill="#312E81"/>
+  </g>
+</svg>

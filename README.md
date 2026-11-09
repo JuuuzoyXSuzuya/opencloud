@@ -175,6 +175,10 @@ it is intentionally not part of the unit test run.
 
 - `opencloud-icon.svg` / `opencloud-icon-1024.png` / `-512.png` / `-256.png`
 - `opencloud-logo.svg` / `opencloud-logo.png` (icon + wordmark)
+- `opencloud-avatar.svg` / `opencloud-avatar-1024.png` / `-512.png` / `-256.png`
+  — flat avatar format for profile pictures
+- `opencloud-avatar-circle.svg` / `opencloud-avatar-circle-1024.png` — round variant
+  with transparent corners
 
 ## License
 
