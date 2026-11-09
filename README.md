@@ -39,6 +39,10 @@ TikTok first, then install the OpenCloud build. A second launcher icon named
   system is in light mode. Region spoofing is exposed there as well; the Google
   browser login and the TikTok settings row are shown as build-time modules.
 
+The screen uses a hand-built **Material 3** scheme (baseline light/dark tonal
+roles, filled and tonal buttons, rounded cards, switches and ripple feedback)
+so it needs no extra resources and still follows the dark-theme plugin.
+
 TikTok's own settings screen gets a **"Настройки OpenCloud"** row pinned above
 the list (the fragment's view is wrapped by `SettingsEntry.decorate`; no
 Compose cell or resource is injected). Tapping the row opens the OpenCloud

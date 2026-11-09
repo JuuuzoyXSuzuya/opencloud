@@ -3,8 +3,11 @@ package dev.opencloud.region;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.os.Build;
 import android.view.Gravity;
 import android.view.View;
@@ -54,12 +57,10 @@ public final class SettingsEntry {
         applyWindowInsets(root, compose);
 
         root.addView(buildRow(context, activity),
-                new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.WRAP_CONTENT));
+                rowParams(context));
 
         View divider = new View(context);
-        divider.setBackgroundColor(isDark(context) ? 0xFF2A2C34 : 0xFFE6E7EA);
+        divider.setBackgroundColor(isDark(context) ? 0xFF49454F : 0xFFCAC4D0);
         root.addView(divider, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(context, 1))));
 
@@ -91,18 +92,37 @@ public final class SettingsEntry {
         root.requestApplyInsets();
     }
 
+    private static LinearLayout.LayoutParams rowParams(Context context) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.leftMargin = dp(context, 16);
+        params.rightMargin = dp(context, 16);
+        params.topMargin = dp(context, 8);
+        params.bottomMargin = dp(context, 4);
+        return params;
+    }
+
     private static View buildRow(final Context context, final Activity activity) {
         boolean dark = isDark(context);
-        int background = dark ? 0xFF121218 : 0xFFFFFFFF;
-        int titleColor = dark ? 0xFFF2F3F7 : 0xFF161823;
-        int subtitleColor = dark ? 0xFF9BA1AD : 0xFF8A8B91;
-        int arrowColor = dark ? 0xFF7C8494 : 0xFFB0B2B8;
+        int background = dark ? 0xFF2B2930 : 0xFFECE6F0;
+        int titleColor = dark ? 0xFFE6E0E9 : 0xFF1D1B20;
+        int subtitleColor = dark ? 0xFFCAC4D0 : 0xFF49454F;
+        int arrowColor = dark ? 0xFFCAC4D0 : 0xFF49454F;
+        int rippleColor = dark ? 0x33D0BCFF : 0x336750A4;
 
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(context, 20), dp(context, 14), dp(context, 16), dp(context, 14));
-        row.setBackgroundColor(background);
+        GradientDrawable fill = new GradientDrawable();
+        fill.setColor(background);
+        fill.setCornerRadius(dp(context, 24));
+        GradientDrawable mask = new GradientDrawable();
+        mask.setColor(0xFFFFFFFF);
+        mask.setCornerRadius(dp(context, 24));
+        row.setBackground(new RippleDrawable(
+                ColorStateList.valueOf(rippleColor), fill, mask));
         row.setClickable(true);
         row.setFocusable(true);
 

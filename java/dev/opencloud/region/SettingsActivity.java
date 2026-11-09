@@ -4,8 +4,10 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -13,11 +15,11 @@ import android.view.View;
 import android.view.WindowInsets;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -36,7 +38,7 @@ import java.util.List;
 public final class SettingsActivity extends Activity {
     private static final int REQUEST_PLUGIN = 41;
 
-    private CheckBox toggle;
+    private CompoundButton toggle;
     private TextView summary;
 
     private boolean dark;
@@ -47,6 +49,8 @@ public final class SettingsActivity extends Activity {
     private int colorCardButton;
     private int colorStroke;
     private int colorAccent;
+    private int colorOnAccent;
+    private int colorOnCardButton;
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -65,7 +69,8 @@ public final class SettingsActivity extends Activity {
 
         TextView title = new TextView(this);
         title.setText("Настройки OpenCloud");
-        title.setTextSize(26);
+        title.setTextSize(24);
+        title.setLetterSpacing(-0.01f);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setTextColor(colorFg);
         column.addView(title);
@@ -80,10 +85,17 @@ public final class SettingsActivity extends Activity {
         TextView regionTitle = section("Регион");
         column.addView(regionTitle);
 
-        toggle = new CheckBox(this);
-        toggle.setText("Использовать профиль региона");
-        toggle.setTextColor(colorFg);
-        toggle.setChecked(Config.isOn(this));
+        Switch toggleSwitch = new Switch(this);
+        toggleSwitch.setText("Использовать профиль региона");
+        toggleSwitch.setTextSize(16);
+        toggleSwitch.setTextColor(colorFg);
+        toggleSwitch.setChecked(Config.isOn(this));
+        int[][] states = {{android.R.attr.state_checked}, {}};
+        toggleSwitch.setThumbTintList(new ColorStateList(states,
+                new int[]{colorAccent, colorStroke}));
+        toggleSwitch.setTrackTintList(new ColorStateList(states,
+                new int[]{withAlpha(colorAccent, 0.55f), colorCard}));
+        toggle = toggleSwitch;
         spacing(toggle, pixels(10));
         toggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -99,9 +111,9 @@ public final class SettingsActivity extends Activity {
         card.setPadding(pixels(16), pixels(16), pixels(16), pixels(16));
         GradientDrawable background = new GradientDrawable();
         background.setColor(colorCardButton);
-        background.setCornerRadius(pixels(12));
-        background.setStroke(pixels(2), colorAccent);
-        card.setBackground(background);
+        background.setCornerRadius(pixels(24));
+        card.setBackground(new RippleDrawable(
+                ColorStateList.valueOf(withAlpha(colorOnCardButton, 0.12f)), background, null));
         card.setClickable(true);
         card.setFocusable(true);
         card.setOnClickListener(new View.OnClickListener() {
@@ -115,22 +127,22 @@ public final class SettingsActivity extends Activity {
 
         TextView cardTitle = new TextView(this);
         cardTitle.setText("Выбор региона");
-        cardTitle.setTextSize(18);
+        cardTitle.setTextSize(20);
         cardTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        cardTitle.setTextColor(colorAccent);
+        cardTitle.setTextColor(colorOnCardButton);
         card.addView(cardTitle);
 
         summary = new TextView(this);
         summary.setTextSize(14);
-        summary.setTextColor(colorFg);
+        summary.setTextColor(colorOnCardButton);
         summary.setPadding(0, pixels(6), 0, 0);
         card.addView(summary);
 
         TextView cardHint = new TextView(this);
         cardHint.setText("Нажмите, чтобы выбрать страну и оператора.");
-        cardHint.setTextSize(12);
-        cardHint.setTextColor(colorMuted);
-        cardHint.setPadding(0, pixels(6), 0, 0);
+        cardHint.setTextSize(13);
+        cardHint.setTextColor(withAlpha(colorOnCardButton, 0.75f));
+        cardHint.setPadding(0, pixels(8), 0, 0);
         card.addView(cardHint);
 
         column.addView(section("Функции"));
@@ -216,22 +228,32 @@ public final class SettingsActivity extends Activity {
 
     private void applyPalette() {
         if (dark) {
-            colorBg = 0xFF101014;
-            colorFg = 0xFFF2F3F7;
-            colorMuted = 0xFF9BA1AD;
-            colorCard = 0xFF1B1C22;
-            colorCardButton = 0xFF0F2B33;
-            colorStroke = 0xFF2C2E38;
-            colorAccent = 0xFF22D3EE;
+            // Material 3 baseline dark scheme.
+            colorBg = 0xFF141218;
+            colorFg = 0xFFE6E0E9;
+            colorMuted = 0xFFCAC4D0;
+            colorCard = 0xFF2B2930;
+            colorCardButton = 0xFF4F378B;
+            colorStroke = 0xFF938F99;
+            colorAccent = 0xFFD0BCFF;
+            colorOnAccent = 0xFF381E72;
+            colorOnCardButton = 0xFFEADDFF;
         } else {
-            colorBg = 0xFFF6F7F9;
-            colorFg = 0xFF17181C;
-            colorMuted = 0xFF5C6270;
-            colorCard = 0xFFF0F1F3;
-            colorCardButton = 0xFFE6F7FA;
-            colorStroke = 0xFFD0D3D8;
-            colorAccent = 0xFF0E7490;
+            // Material 3 baseline light scheme.
+            colorBg = 0xFFFEF7FF;
+            colorFg = 0xFF1D1B20;
+            colorMuted = 0xFF49454F;
+            colorCard = 0xFFECE6F0;
+            colorCardButton = 0xFFEADDFF;
+            colorStroke = 0xFF79747E;
+            colorAccent = 0xFF6750A4;
+            colorOnAccent = 0xFFFFFFFF;
+            colorOnCardButton = 0xFF21005D;
         }
+    }
+
+    private int withAlpha(int color, float alpha) {
+        return (color & 0x00FFFFFF) | (Math.round(alpha * 255f) << 24);
     }
 
     private TextView section(String label) {
@@ -252,11 +274,16 @@ public final class SettingsActivity extends Activity {
         row.setPadding(0, pixels(10), 0, pixels(4));
 
         if (plugin.runtime) {
-            CheckBox box = new CheckBox(this);
+            Switch box = new Switch(this);
             box.setText(plugin.title);
             box.setTextSize(16);
             box.setTextColor(colorFg);
             box.setChecked(Plugins.isEnabled(this, plugin.id));
+            int[][] states = {{android.R.attr.state_checked}, {}};
+            box.setThumbTintList(new ColorStateList(states,
+                    new int[]{colorAccent, colorStroke}));
+            box.setTrackTintList(new ColorStateList(states,
+                    new int[]{withAlpha(colorAccent, 0.55f), colorCard}));
             box.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton button, boolean checked) {
@@ -292,8 +319,7 @@ public final class SettingsActivity extends Activity {
         card.setPadding(pixels(14), pixels(14), pixels(14), pixels(14));
         GradientDrawable background = new GradientDrawable();
         background.setColor(colorCard);
-        background.setCornerRadius(pixels(12));
-        background.setStroke(pixels(1), colorStroke);
+        background.setCornerRadius(pixels(20));
         card.setBackground(background);
         spacing(card, pixels(12));
 
@@ -363,18 +389,32 @@ public final class SettingsActivity extends Activity {
         return card;
     }
 
+    private GradientDrawable shape(int fill, int radius, int strokeWidth, int strokeColor) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(fill);
+        drawable.setCornerRadius(pixels(radius));
+        if (strokeWidth > 0) {
+            drawable.setStroke(pixels(strokeWidth), strokeColor);
+        }
+        return drawable;
+    }
+
+    private RippleDrawable ripple(int fill, int radius, int strokeWidth, int strokeColor,
+                                  int rippleColor) {
+        return new RippleDrawable(ColorStateList.valueOf(rippleColor),
+                shape(fill, radius, strokeWidth, strokeColor),
+                shape(0xFFFFFFFF, radius, 0, 0));
+    }
+
     private TextView accentButton(String label) {
         TextView button = new TextView(this);
         button.setText(label);
         button.setTextSize(15);
         button.setTypeface(Typeface.DEFAULT_BOLD);
         button.setGravity(Gravity.CENTER);
-        button.setPadding(pixels(16), pixels(11), pixels(16), pixels(11));
-        button.setTextColor(dark ? 0xFF06121A : 0xFFFFFFFF);
-        GradientDrawable background = new GradientDrawable();
-        background.setColor(colorAccent);
-        background.setCornerRadius(pixels(10));
-        button.setBackground(background);
+        button.setPadding(pixels(24), pixels(14), pixels(24), pixels(14));
+        button.setTextColor(colorOnAccent);
+        button.setBackground(ripple(colorAccent, 20, 0, 0, withAlpha(colorOnAccent, 0.20f)));
         button.setClickable(true);
         button.setFocusable(true);
         return button;
@@ -386,13 +426,10 @@ public final class SettingsActivity extends Activity {
         button.setTextSize(15);
         button.setTypeface(Typeface.DEFAULT_BOLD);
         button.setGravity(Gravity.CENTER);
-        button.setPadding(pixels(16), pixels(10), pixels(16), pixels(10));
-        button.setTextColor(colorAccent);
-        GradientDrawable background = new GradientDrawable();
-        background.setColor(0x00000000);
-        background.setCornerRadius(pixels(10));
-        background.setStroke(pixels(2), colorAccent);
-        button.setBackground(background);
+        button.setPadding(pixels(24), pixels(14), pixels(24), pixels(14));
+        button.setTextColor(colorOnCardButton);
+        button.setBackground(ripple(colorCardButton, 20, 0, 0,
+                withAlpha(colorOnCardButton, 0.20f)));
         button.setClickable(true);
         button.setFocusable(true);
         return button;
