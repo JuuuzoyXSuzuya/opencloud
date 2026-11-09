@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/branding/opencloud-logo.png" alt="OpenCloud — region profile patcher" width="520">
+</p>
+
 # OpenCloud
 
 OpenCloud patches a **universal TikTok APK** so the app sees a region profile
@@ -164,6 +168,13 @@ python3 -m unittest discover -s tests
 The tests cover the binary XML reader/writer, the country table validator and
 the smali rewriter. A full APK round-trip needs the Android SDK and an APK;
 it is intentionally not part of the unit test run.
+
+## Branding
+
+`assets/branding/` contains the source logo files:
+
+- `opencloud-icon.svg` / `opencloud-icon-1024.png` / `-512.png` / `-256.png`
+- `opencloud-logo.svg` / `opencloud-logo.png` (icon + wordmark)
 
 ## License
 

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1634 620" width="1634" height="620" role="img" aria-label="OpenCloud — region profile patcher">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1B2A4A"/>
+      <stop offset="1" stop-color="#0A0F1E"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.29" cy="0.21" r="0.88">
+      <stop offset="0" stop-color="#2A4A7A" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#2A4A7A" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cloud" x1="0" y1="216" x2="0" y2="712" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#C3D2E8"/>
+    </linearGradient>
+    <clipPath id="tile">
+      <rect x="0" y="0" width="1024" height="1024" rx="240" ry="240"/>
+    </clipPath>
+    <clipPath id="globeClip">
+      <circle cx="502" cy="506" r="118"/>
+    </clipPath>
+  </defs>
+
+  <!-- icon -->
+  <g transform="translate(40 90) scale(0.4297)">
+    <g clip-path="url(#tile)">
+      <rect width="1024" height="1024" fill="url(#bg)"/>
+      <rect width="1024" height="1024" fill="url(#glow)"/>
+      <path d="M320 726 C214 726 132 650 132 556 C132 468 196 398 280 386 C310 294 396 230 496 230 C594 230 678 298 706 390 C788 402 852 470 852 560 C852 654 774 726 672 726 Z" fill="#000000" opacity="0.24"/>
+      <path d="M320 712 C214 712 132 636 132 542 C132 454 196 384 280 372 C310 280 396 216 496 216 C594 216 678 284 706 376 C788 388 852 456 852 546 C852 640 774 712 672 712 Z" fill="url(#cloud)"/>
+      <circle cx="502" cy="506" r="118" fill="#0A0F1E"/>
+      <g clip-path="url(#globeClip)" fill="none" stroke="#22D3EE" stroke-width="6" stroke-linecap="round">
+        <ellipse cx="502" cy="506" rx="44" ry="118"/>
+        <ellipse cx="502" cy="506" rx="88" ry="118"/>
+        <path d="M395 434 Q502 452 609 434"/>
+        <path d="M384 470 Q502 488 620 470"/>
+        <path d="M384 506 Q502 524 620 506"/>
+        <path d="M384 542 Q502 560 620 542"/>
+        <path d="M395 578 Q502 596 609 578"/>
+      </g>
+      <circle cx="502" cy="506" r="118" fill="none" stroke="#22D3EE" stroke-width="7"/>
+      <circle cx="554" cy="452" r="21" fill="#FF8A3D" stroke="#FFFFFF" stroke-width="7"/>
+      <circle cx="554" cy="452" r="6" fill="#0A0F1E"/>
+    </g>
+  </g>
+
+  <!-- wordmark -->
+  <g font-family="DejaVu Sans, Verdana, sans-serif" font-weight="bold">
+    <text x="540" y="335" font-size="170">
+      <tspan fill="#E2E8F0">Open</tspan><tspan fill="#22D3EE">Cloud</tspan>
+    </text>
+    <text x="544" y="413" font-size="34" letter-spacing="15.3" fill="#8FA3C0">REGION PROFILE PATCHER</text>
+  </g>
+</svg>
