@@ -60,7 +60,7 @@ public final class SettingsEntry {
                 rowParams(context));
 
         View divider = new View(context);
-        divider.setBackgroundColor(isDark(context) ? 0xFF49454F : 0xFFCAC4D0);
+        divider.setBackgroundColor(withAlpha(Palette.of(context, isDark(context)).outline, 0.5f));
         root.addView(divider, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(context, 1))));
 
@@ -105,11 +105,12 @@ public final class SettingsEntry {
 
     private static View buildRow(final Context context, final Activity activity) {
         boolean dark = isDark(context);
-        int background = dark ? 0xFF2B2930 : 0xFFECE6F0;
-        int titleColor = dark ? 0xFFE6E0E9 : 0xFF1D1B20;
-        int subtitleColor = dark ? 0xFFCAC4D0 : 0xFF49454F;
-        int arrowColor = dark ? 0xFFCAC4D0 : 0xFF49454F;
-        int rippleColor = dark ? 0x33D0BCFF : 0x336750A4;
+        Palette palette = Palette.of(context, dark);
+        int background = palette.surfaceContainerHigh;
+        int titleColor = palette.onSurface;
+        int subtitleColor = palette.onSurfaceVariant;
+        int arrowColor = palette.onSurfaceVariant;
+        int rippleColor = withAlpha(palette.primary, 0.32f);
 
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -208,6 +209,10 @@ public final class SettingsEntry {
     private static int dp(Context context, int value) {
         float scale = context.getResources().getDisplayMetrics().density;
         return Math.round(value * scale);
+    }
+
+    private static int withAlpha(int color, float alpha) {
+        return (color & 0x00FFFFFF) | (Math.round(alpha * 255f) << 24);
     }
 
     private static boolean isDark(Context context) {

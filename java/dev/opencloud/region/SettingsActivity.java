@@ -9,13 +9,17 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.view.WindowInsets;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
@@ -26,6 +30,7 @@ import android.widget.Toast;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * The only screen OpenCloud adds.  It is built in code so the patcher never
@@ -210,7 +215,27 @@ public final class SettingsActivity extends Activity {
         frame.addView(column);
         setContentView(frame);
         applyInsets(frame, column, edge);
+        applySystemBars();
         updateSummary();
+    }
+
+    private void applySystemBars() {
+        getWindow().setStatusBarColor(colorBg);
+        getWindow().setNavigationBarColor(colorBg);
+        int flags = getWindow().getDecorView().getSystemUiVisibility();
+        if (dark) {
+            flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        } else {
+            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (dark) {
+                flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            } else {
+                flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            }
+        }
+        getWindow().getDecorView().setSystemUiVisibility(flags);
     }
 
     private boolean detectDark() {
@@ -227,29 +252,16 @@ public final class SettingsActivity extends Activity {
     }
 
     private void applyPalette() {
-        if (dark) {
-            // Material 3 baseline dark scheme.
-            colorBg = 0xFF141218;
-            colorFg = 0xFFE6E0E9;
-            colorMuted = 0xFFCAC4D0;
-            colorCard = 0xFF2B2930;
-            colorCardButton = 0xFF4F378B;
-            colorStroke = 0xFF938F99;
-            colorAccent = 0xFFD0BCFF;
-            colorOnAccent = 0xFF381E72;
-            colorOnCardButton = 0xFFEADDFF;
-        } else {
-            // Material 3 baseline light scheme.
-            colorBg = 0xFFFEF7FF;
-            colorFg = 0xFF1D1B20;
-            colorMuted = 0xFF49454F;
-            colorCard = 0xFFECE6F0;
-            colorCardButton = 0xFFEADDFF;
-            colorStroke = 0xFF79747E;
-            colorAccent = 0xFF6750A4;
-            colorOnAccent = 0xFFFFFFFF;
-            colorOnCardButton = 0xFF21005D;
-        }
+        Palette palette = Palette.of(this, dark);
+        colorBg = palette.surface;
+        colorFg = palette.onSurface;
+        colorMuted = palette.onSurfaceVariant;
+        colorCard = palette.surfaceContainerHigh;
+        colorCardButton = palette.primaryContainer;
+        colorStroke = palette.outline;
+        colorAccent = palette.primary;
+        colorOnAccent = palette.onPrimary;
+        colorOnCardButton = palette.onPrimaryContainer;
     }
 
     private int withAlpha(int color, float alpha) {
@@ -516,6 +528,7 @@ public final class SettingsActivity extends Activity {
         if (countries.isEmpty()) {
             return;
         }
+        final List<Profile> filtered = new ArrayList<Profile>(countries);
         final List<String> countryLabels = new ArrayList<String>();
         int countryIndex = 0;
         String currentIso = Config.selectedIso(this);
@@ -537,14 +550,63 @@ public final class SettingsActivity extends Activity {
         countryLabel.setTypeface(Typeface.DEFAULT_BOLD);
         content.addView(countryLabel);
 
+        final EditText search = new EditText(this);
+        search.setHint("Поиск страны");
+        search.setSingleLine(true);
+        search.setTextSize(15);
+        search.setTextColor(colorFg);
+        search.setHintTextColor(colorMuted);
+        if (search.getBackground() != null) {
+            search.getBackground().setTint(colorAccent);
+        }
+        spacing(search, pixels(8));
+        content.addView(search);
+
         final Spinner countryPicker = new Spinner(this);
-        ArrayAdapter<String> countryAdapter = new ArrayAdapter<String>(
+        final ArrayAdapter<String> countryAdapter = new ArrayAdapter<String>(
                 this, android.R.layout.simple_spinner_item, countryLabels);
         countryAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         countryPicker.setAdapter(countryAdapter);
         countryPicker.setSelection(countryIndex);
         spacing(countryPicker, pixels(6));
         content.addView(countryPicker);
+
+        search.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                String query = s.toString().trim().toLowerCase(Locale.ROOT);
+                String selectedIso = Config.selectedIso(SettingsActivity.this);
+                filtered.clear();
+                countryLabels.clear();
+                int selected = 0;
+                for (int i = 0; i < countries.size(); i++) {
+                    Profile country = countries.get(i);
+                    boolean matches = query.length() == 0
+                            || country.country().toLowerCase(Locale.ROOT).contains(query)
+                            || country.code().toLowerCase(Locale.ROOT).contains(query);
+                    if (!matches) {
+                        continue;
+                    }
+                    if (country.code().equals(selectedIso)) {
+                        selected = filtered.size();
+                    }
+                    filtered.add(country);
+                    countryLabels.add(country.country());
+                }
+                countryAdapter.notifyDataSetChanged();
+                if (selected < countryLabels.size()) {
+                    countryPicker.setSelection(selected);
+                }
+            }
+        });
 
         TextView operatorLabel = new TextView(this);
         operatorLabel.setText("Оператор");
@@ -566,10 +628,10 @@ public final class SettingsActivity extends Activity {
             @Override
             public void run() {
                 int at = countryPicker.getSelectedItemPosition();
-                if (at < 0 || at >= countries.size()) {
+                if (at < 0 || at >= filtered.size()) {
                     return;
                 }
-                Profile country = countries.get(at);
+                Profile country = filtered.get(at);
                 List<Profile> operators = Atlas.profilesFor(country.code());
                 operatorLabels.clear();
                 int selected = 0;
@@ -610,10 +672,10 @@ public final class SettingsActivity extends Activity {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 int at = countryPicker.getSelectedItemPosition();
-                if (at < 0 || at >= countries.size()) {
+                if (at < 0 || at >= filtered.size()) {
                     return;
                 }
-                Profile country = countries.get(at);
+                Profile country = filtered.get(at);
                 List<Profile> operators = Atlas.profilesFor(country.code());
                 int selected = operatorPicker.getSelectedItemPosition();
                 if (selected < 0 || selected >= operators.size()) {
