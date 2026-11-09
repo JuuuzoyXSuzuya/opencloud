@@ -1,5 +1,7 @@
 package dev.opencloud.region;
 
+import android.content.res.AssetManager;
+import android.graphics.Typeface;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
@@ -117,5 +119,25 @@ public final class Hooks {
         return Config.currentProfile() == null
                 ? SubscriptionManager.getActiveDataSubscriptionId()
                 : 1;
+    }
+
+    public static Typeface typeface(String family, int style) {
+        return Fonts.create(family, style);
+    }
+
+    public static Typeface typeface(Typeface base, int style) {
+        return Fonts.create(base, style);
+    }
+
+    public static Typeface defaultTypeface(int style) {
+        return Fonts.defaultStyle(style);
+    }
+
+    public static Typeface typefaceFromAsset(AssetManager assets, String path) {
+        return Fonts.fromAsset(assets, path);
+    }
+
+    public static Typeface typefaceFromFile(String path) {
+        return Fonts.fromFile(path);
     }
 }

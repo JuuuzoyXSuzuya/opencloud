@@ -67,6 +67,26 @@ STATIC_TARGETS: tuple[StaticTarget, ...] = (
     StaticTarget(SUBSCRIPTION, "getActiveDataSubscriptionId", "()I", "activeDataId"),
 )
 
+# Font overrides.  These are kept in a separate tuple because the method name
+# "create" is too common to be useful as a prefilter; the scanner looks for the
+# Typeface owner instead and only then runs these patterns.
+TYPEFACE_OWNER = "Landroid/graphics/Typeface;"
+FONT_OWNER_MARKER = TYPEFACE_OWNER + "->"
+
+FONT_TARGETS: tuple[StaticTarget, ...] = (
+    StaticTarget(TYPEFACE_OWNER, "create",
+                 "(Ljava/lang/String;I)Landroid/graphics/Typeface;", "typeface"),
+    StaticTarget(TYPEFACE_OWNER, "create",
+                 "(Landroid/graphics/Typeface;I)Landroid/graphics/Typeface;", "typeface"),
+    StaticTarget(TYPEFACE_OWNER, "defaultFromStyle",
+                 "(I)Landroid/graphics/Typeface;", "defaultTypeface"),
+    StaticTarget(TYPEFACE_OWNER, "createFromAsset",
+                 "(Landroid/content/res/AssetManager;Ljava/lang/String;)"
+                 "Landroid/graphics/Typeface;", "typefaceFromAsset"),
+    StaticTarget(TYPEFACE_OWNER, "createFromFile",
+                 "(Ljava/lang/String;)Landroid/graphics/Typeface;", "typefaceFromFile"),
+)
+
 
 @dataclass(frozen=True)
 class MethodOverride:
@@ -310,23 +330,34 @@ def rewrite(root: Path, strict: bool = False, allow_missing: bool = False) -> Re
     for directory in directories:
         for path in directory.rglob("*.smali"):
             text = path.read_text(encoding="utf-8")
-            if not any(name in text for name in names):
+            has_phone = any(name in text for name in names)
+            has_font = FONT_OWNER_MARKER in text
+            if not has_phone and not has_font:
                 continue
             previous = text
-            for target in INSTANCE_TARGETS:
-                pattern = _instance_pattern(target)
-                replacement = r"\1invoke-static\2\3" + HOOKS + "->" + target.hook + target.replacement
-                text, hits = pattern.subn(replacement, text)
-                if hits:
-                    key = "%s->%s%s" % (target.owner, target.method, target.signature)
-                    counts[key] = counts.get(key, 0) + hits
-            for target in STATIC_TARGETS:
-                pattern = _static_pattern(target)
-                replacement = r"\1invoke-static\2\3" + HOOKS + "->" + target.hook + target.replacement
-                text, hits = pattern.subn(replacement, text)
-                if hits:
-                    key = "%s->%s%s" % (target.owner, target.method, target.signature)
-                    counts[key] = counts.get(key, 0) + hits
+            if has_phone:
+                for target in INSTANCE_TARGETS:
+                    pattern = _instance_pattern(target)
+                    replacement = r"\1invoke-static\2\3" + HOOKS + "->" + target.hook + target.replacement
+                    text, hits = pattern.subn(replacement, text)
+                    if hits:
+                        key = "%s->%s%s" % (target.owner, target.method, target.signature)
+                        counts[key] = counts.get(key, 0) + hits
+                for target in STATIC_TARGETS:
+                    pattern = _static_pattern(target)
+                    replacement = r"\1invoke-static\2\3" + HOOKS + "->" + target.hook + target.replacement
+                    text, hits = pattern.subn(replacement, text)
+                    if hits:
+                        key = "%s->%s%s" % (target.owner, target.method, target.signature)
+                        counts[key] = counts.get(key, 0) + hits
+            if has_font:
+                for target in FONT_TARGETS:
+                    pattern = _static_pattern(target)
+                    replacement = r"\1invoke-static\2\3" + HOOKS + "->" + target.hook + target.replacement
+                    text, hits = pattern.subn(replacement, text)
+                    if hits:
+                        key = "%s->%s%s" % (target.owner, target.method, target.signature)
+                        counts[key] = counts.get(key, 0) + hits
             if text != previous:
                 path.write_text(text, encoding="utf-8")
                 changed += 1

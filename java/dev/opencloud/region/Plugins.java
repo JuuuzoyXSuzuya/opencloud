@@ -16,6 +16,7 @@ import android.content.SharedPreferences;
  */
 final class Plugins {
     static final String DARK_THEME = "dark_theme";
+    static final String FONT = "custom_font";
     private static final String PREFIX = "plugin_";
 
     static final class Descriptor {
@@ -41,6 +42,11 @@ final class Plugins {
                     "Тёмная тема",
                     "Всегда тёмное оформление TikTok, даже если в системе включена светлая тема.",
                     true, true),
+            new Descriptor(
+                    FONT,
+                    "Свой шрифт",
+                    "Заменяет шрифт TikTok выбранным системным или импортированным файлом.",
+                    true, false),
             new Descriptor(
                     "browser_google",
                     "Google через браузер",

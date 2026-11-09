@@ -5,12 +5,14 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.database.Cursor;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.OpenableColumns;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Gravity;
@@ -43,6 +45,7 @@ import java.util.Locale;
 public final class SettingsActivity extends Activity {
     private static final int REQUEST_PLUGIN = 41;
     private static final int REQUEST_EXPORT = 42;
+    private static final int REQUEST_FONT = 43;
 
     private CompoundButton toggle;
     private TextView summary;
@@ -175,6 +178,56 @@ public final class SettingsActivity extends Activity {
                 segmentParams(8));
         column.addView(themeRow);
 
+        column.addView(section("Шрифт"));
+
+        TextView fontIntro = new TextView(this);
+        fontIntro.setText("Системный шрифт или свой файл .ttf/.otf. OpenCloud применяет его сразу, "
+                + "TikTok — при включённом переключателе и после перезапуска.");
+        fontIntro.setTextSize(13);
+        fontIntro.setTextColor(colorMuted);
+        spacing(fontIntro, pixels(2));
+        column.addView(fontIntro);
+
+        TextView fontValue = new TextView(this);
+        fontValue.setText(Fonts.selectedLabel(this));
+        fontValue.setTextSize(16);
+        fontValue.setTextColor(colorFg);
+        fontValue.setPadding(pixels(2), pixels(10), 0, 0);
+        column.addView(fontValue);
+
+        TextView chooseFont = accentButton("Выбрать шрифт");
+        spacing(chooseFont, pixels(10));
+        chooseFont.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                showFontDialog();
+            }
+        });
+        column.addView(chooseFont);
+
+        Switch fontSwitch = new Switch(this);
+        fontSwitch.setText("Применять шрифт в TikTok");
+        fontSwitch.setTextSize(16);
+        fontSwitch.setTextColor(colorFg);
+        fontSwitch.setChecked(Plugins.isEnabled(this, Plugins.FONT) && Fonts.isCustom(this));
+        fontSwitch.setEnabled(Fonts.isCustom(this));
+        fontSwitch.setThumbTintList(new ColorStateList(states,
+                new int[]{colorAccent, colorStroke}));
+        fontSwitch.setTrackTintList(new ColorStateList(states,
+                new int[]{withAlpha(colorAccent, 0.55f), colorCard}));
+        fontSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton button, boolean checked) {
+                Plugins.setEnabled(SettingsActivity.this, Plugins.FONT, checked);
+                Toast.makeText(SettingsActivity.this,
+                        checked ? "Шрифт применится после перезапуска TikTok"
+                                : "Шрифт TikTok отключён",
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+        spacing(fontSwitch, pixels(12));
+        column.addView(fontSwitch);
+
         column.addView(section("Функции"));
 
         TextView pluginIntro = new TextView(this);
@@ -187,8 +240,9 @@ public final class SettingsActivity extends Activity {
 
         Plugins.Descriptor[] plugins = Plugins.all();
         for (int i = 0; i < plugins.length; i++) {
-            if (Plugins.DARK_THEME.equals(plugins[i].id)) {
-                continue; // handled by the TikTok theme selector above
+            if (Plugins.DARK_THEME.equals(plugins[i].id)
+                    || Plugins.FONT.equals(plugins[i].id)) {
+                continue; // handled by the theme and font selectors above
             }
             column.addView(pluginRow(plugins[i]));
         }
@@ -271,6 +325,7 @@ public final class SettingsActivity extends Activity {
         setContentView(frame);
         applyInsets(frame, column, edge);
         applySystemBars();
+        Fonts.applyTo(frame);
         updateSummary();
     }
 
@@ -547,6 +602,8 @@ public final class SettingsActivity extends Activity {
             handleImport(data);
         } else if (requestCode == REQUEST_EXPORT) {
             handleExport(data);
+        } else if (requestCode == REQUEST_FONT && data.getData() != null) {
+            handleFont(data.getData());
         }
     }
 
@@ -683,6 +740,7 @@ public final class SettingsActivity extends Activity {
             public void onClick(DialogInterface dialog, int which) {
                 Prefs.open(SettingsActivity.this).edit().clear().apply();
                 PluginStore.deleteAll(SettingsActivity.this);
+                Fonts.deleteImported(SettingsActivity.this);
                 ThemePlugin.refresh();
                 Toast.makeText(SettingsActivity.this, "Настройки сброшены",
                         Toast.LENGTH_SHORT).show();
@@ -870,6 +928,7 @@ public final class SettingsActivity extends Activity {
             }
         });
         refreshOperators.run();
+        Fonts.applyTo(content);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this,
                 dark ? android.R.style.Theme_DeviceDefault_Dialog_Alert
@@ -902,6 +961,163 @@ public final class SettingsActivity extends Activity {
         });
         builder.setNegativeButton("Отмена", null);
         builder.show();
+    }
+
+    private void showFontDialog() {
+        final AlertDialog[] holder = new AlertDialog[1];
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(1);
+        content.setPadding(pixels(20), pixels(4), pixels(20), 0);
+
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(1);
+        addFontRow(list, "Системный (по умолчанию)", "", holder);
+        List<Fonts.Option> fonts = Fonts.systemFonts();
+        for (int i = 0; i < fonts.size(); i++) {
+            Fonts.Option option = fonts.get(i);
+            addFontRow(list, option.label, option.path, holder);
+        }
+        scroll.addView(list);
+        content.addView(scroll, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, pixels(360)));
+
+        TextView load = outlineButton("Загрузить .ttf / .otf");
+        spacing(load, pixels(10));
+        load.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                if (holder[0] != null) {
+                    holder[0].dismiss();
+                }
+                pickFontFile();
+            }
+        });
+        content.addView(load);
+
+        if (Fonts.isCustom(this)) {
+            TextView reset = outlineButton("Сбросить на системный шрифт");
+            spacing(reset, pixels(8));
+            reset.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View clicked) {
+                    Fonts.useSystem(SettingsActivity.this);
+                    Plugins.setEnabled(SettingsActivity.this, Plugins.FONT, false);
+                    if (holder[0] != null) {
+                        holder[0].dismiss();
+                    }
+                    recreate();
+                }
+            });
+            content.addView(reset);
+        }
+
+        AlertDialog dialog = new AlertDialog.Builder(this,
+                dark ? android.R.style.Theme_DeviceDefault_Dialog_Alert
+                        : android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
+                .setTitle("Шрифт")
+                .setView(content)
+                .setNegativeButton("Отмена", null)
+                .create();
+        holder[0] = dialog;
+        Fonts.applyTo(content);
+        dialog.show();
+    }
+
+    private void addFontRow(LinearLayout list, final String label, final String path,
+                            final AlertDialog[] holder) {
+        boolean selected = path.length() == 0
+                ? !Fonts.isCustom(this)
+                : path.equals(Fonts.selectedPath(this));
+        TextView row = new TextView(this);
+        row.setText(label);
+        row.setTextSize(15);
+        row.setPadding(pixels(14), pixels(12), pixels(14), pixels(12));
+        if (selected) {
+            row.setTextColor(colorOnCardButton);
+            row.setBackground(ripple(colorCardButton, 16, 0, 0,
+                    withAlpha(colorOnCardButton, 0.20f)));
+        } else {
+            row.setTextColor(colorFg);
+            row.setBackground(ripple(0x00000000, 16, 0, 0,
+                    withAlpha(colorAccent, 0.10f)));
+        }
+        row.setClickable(true);
+        row.setFocusable(true);
+        row.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                if (path.length() == 0) {
+                    Fonts.useSystem(SettingsActivity.this);
+                    Plugins.setEnabled(SettingsActivity.this, Plugins.FONT, false);
+                } else {
+                    Fonts.use(SettingsActivity.this, path, label);
+                    Plugins.setEnabled(SettingsActivity.this, Plugins.FONT, true);
+                }
+                if (holder[0] != null) {
+                    holder[0].dismiss();
+                }
+                recreate();
+            }
+        });
+        list.addView(row);
+    }
+
+    private void pickFontFile() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*");
+        intent.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{
+                "font/ttf", "font/otf", "application/x-font-ttf",
+                "application/x-font-opentype", "application/octet-stream"});
+        startActivityForResult(intent, REQUEST_FONT);
+    }
+
+    private void handleFont(Uri uri) {
+        InputStream input = null;
+        try {
+            input = getContentResolver().openInputStream(uri);
+            if (input == null) {
+                throw new IllegalStateException("cannot open the selected file");
+            }
+            String label = Fonts.importFont(this, input, displayName(uri));
+            Plugins.setEnabled(this, Plugins.FONT, true);
+            Toast.makeText(this, "Шрифт: " + label, Toast.LENGTH_SHORT).show();
+            recreate();
+        } catch (Throwable error) {
+            Toast.makeText(this, "Не удалось загрузить шрифт: " + describe(error),
+                    Toast.LENGTH_LONG).show();
+        } finally {
+            if (input != null) {
+                try {
+                    input.close();
+                } catch (Throwable ignored) {
+                    // Nothing useful to do here.
+                }
+            }
+        }
+    }
+
+    private String displayName(Uri uri) {
+        Cursor cursor = null;
+        try {
+            cursor = getContentResolver().query(uri,
+                    new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null);
+            if (cursor != null && cursor.moveToFirst()) {
+                int index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (index >= 0 && cursor.getString(index) != null) {
+                    return cursor.getString(index);
+                }
+            }
+        } catch (Throwable ignored) {
+            // Fall back to the URI segment.
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        String last = uri.getLastPathSegment();
+        return last == null ? "custom.ttf" : last;
     }
 
     private void spacing(View child, int top) {

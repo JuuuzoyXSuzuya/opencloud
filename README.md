@@ -24,6 +24,8 @@ TikTok first, then install the OpenCloud build. A second launcher icon named
   - active subscription count and default subscription ids
   - `SubscriptionInfo.getCountryIso()`
 - Adds one extra `classesN.dex` with the bridge and the settings screen.
+- Rewrites `Typeface.create*` call sites to a font bridge, so TikTok can use a
+  system font or a user-supplied `.ttf`/`.otf`.
 - Adds an **OpenCloud** launcher activity to the manifest without touching
   TikTok's resource table.
 - Makes TikTok use its **browser-based Google login** (`google_web`, AppAuth +
@@ -45,6 +47,13 @@ palette comes from the system Material You tonal palettes, so it follows the
 wallpaper; older devices get the M3 baseline light/dark scheme. The region
 dialog has a country search field. It still needs no extra resources and
 follows the dark-theme plugin.
+
+The **"Шрифт"** section keeps the system font, offers every font installed in
+`/system/fonts`, and can import a custom `.ttf`/`.otf`. The selection applies
+to the OpenCloud screen immediately. When **"Применять шрифт в TikTok"** is on,
+the patched `Typeface` call sites return the selected font too, so TikTok's
+text follows it after a restart. Symbol, emoji and LaTeX fonts (`jlm_*`, gift
+combo) are left untouched.
 
 TikTok's own settings screen gets a **"Настройки OpenCloud"** row pinned above
 the list (the fragment's view is wrapped by `SettingsEntry.decorate`; no
@@ -76,6 +85,7 @@ Runtime plugins available now:
 | Plugin | What it does |
 |---|---|
 | Dark theme | Rewrites `LX/005C.LJJIII(int)`, TikTok's central appearance entry point, so every requested mode becomes dark (2). Turning it off restores the mode stored in TikTok's own `sp_dark_mode` preference. |
+| Font | Rewrites `Typeface.create*` and `defaultFromStyle` call sites to the font bridge, which returns the selected system or imported font. Turning it off restores the original typefaces. |
 
 To add a runtime plugin:
 

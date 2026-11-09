@@ -86,6 +86,36 @@ class PatcherTests(unittest.TestCase):
             text = target.read_text(encoding="utf-8")
             self.assertIn("Ldev/opencloud/region/SettingsEntry;->decorate", text)
 
+    def test_typeface_calls_are_rewritten(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "smali").mkdir()
+            path = root / "smali" / "B.smali"
+            path.write_text(
+                ".method public static a()V\n    .locals 2\n"
+                "    invoke-static {v0, v1}, Landroid/graphics/Typeface;->"
+                "create(Ljava/lang/String;I)Landroid/graphics/Typeface;\n"
+                "    invoke-static {v0, v1}, Landroid/graphics/Typeface;->"
+                "create(Landroid/graphics/Typeface;I)Landroid/graphics/Typeface;\n"
+                "    invoke-static {v0}, Landroid/graphics/Typeface;->"
+                "defaultFromStyle(I)Landroid/graphics/Typeface;\n"
+                "    invoke-static {v0, v1}, Landroid/graphics/Typeface;->"
+                "createFromAsset(Landroid/content/res/AssetManager;Ljava/lang/String;)"
+                "Landroid/graphics/Typeface;\n"
+                "    invoke-static {v0}, Landroid/graphics/Typeface;->"
+                "createFromFile(Ljava/lang/String;)Landroid/graphics/Typeface;\n"
+                "    return-void\n.end method\n",
+                encoding="utf-8")
+            result = patcher.rewrite(root, allow_missing=True)
+            self.assertEqual(5, result.total)
+            text = path.read_text(encoding="utf-8")
+            self.assertIn("Hooks;->typeface(Ljava/lang/String;I)", text)
+            self.assertIn("Hooks;->typeface(Landroid/graphics/Typeface;I)", text)
+            self.assertIn("Hooks;->defaultTypeface(I)", text)
+            self.assertIn("Hooks;->typefaceFromAsset(Landroid/content/res/AssetManager;"
+                          "Ljava/lang/String;)", text)
+            self.assertIn("Hooks;->typefaceFromFile(Ljava/lang/String;)", text)
+
     def test_google_web_method_is_replaced(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
