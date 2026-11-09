@@ -1,0 +1,11 @@
+{
+  "id": "dark-de-telekom",
+  "name": "Dark DE — Telekom",
+  "version": 1,
+  "author": "OpenCloud",
+  "description": "Тёмная тема TikTok и регион Германии, оператор Telekom (26201).",
+  "actions": [
+    { "type": "dark_theme", "enabled": true },
+    { "type": "region", "country": "de", "operator": "26201" }
+  ]
+}

@@ -39,13 +39,13 @@ TikTok first, then install the OpenCloud build. A second launcher icon named
   system is in light mode. Region spoofing is exposed there as well; the Google
   browser login and the TikTok settings row are shown as build-time modules.
 
-TikTok's own settings screen gets a **"Выбор региона"** row pinned above the
-list (the fragment's view is wrapped by `SettingsEntry.decorate`; no Compose
-cell or resource is injected). Tapping the row opens the OpenCloud screen.
-There the **"Выбор региона"** card opens a dialog where a country and one of
-its operators can be picked; the choice is stored and every telephony hook
-uses that operator's MCC/MNC and name. The separate **OpenCloud** launcher
-icon still works as a fallback.
+TikTok's own settings screen gets a **"Настройки OpenCloud"** row pinned above
+the list (the fragment's view is wrapped by `SettingsEntry.decorate`; no
+Compose cell or resource is injected). Tapping the row opens the OpenCloud
+screen. There the **"Выбор региона"** card — highlighted in the theme accent
+color — opens a dialog where a country and one of its operators can be picked;
+the choice is stored and every telephony hook uses that operator's MCC/MNC and
+name. The separate **OpenCloud** launcher icon still works as a fallback.
 
 The toggle in the settings screen is reversible at runtime: when it is off,
 every bridge method calls the real framework method again.
@@ -77,6 +77,32 @@ To add a runtime plugin:
 
 The patcher logs every applied override, and `--strict` fails the build if an
 override is missing.
+
+### Custom `.oc` plugins
+
+Besides the built-in switches, the screen has a **"Кастомные плагины"**
+section that imports encrypted `.oc` presets:
+
+- a `.oc` file is `"OCP1"` + a random 12-byte nonce + AES-256-GCM ciphertext
+  and tag, so it cannot be read or edited with a text editor;
+- the decrypted payload is a JSON preset (metadata + a list of actions:
+  `dark_theme`, `region`, built-in `plugin`);
+- imported presets are stored as JSON in the app-private
+  `files/opencloud/plugins/` directory and can be applied or deleted.
+
+Create one with the bundled tool:
+
+```bash
+./tools/ocplugin.sh pack examples/dark-us-tmobile.json out.oc
+```
+
+The format, action schema, security model and import flow are documented in
+[`docs/plugins.md`](docs/plugins.md). Two ready-made examples live in
+`examples/`.
+
+The client-side key is obfuscated, not secret: a determined reverse engineer
+can recover it from the APK. `.oc` prevents casual reading/editing, not
+determined tampering.
 
 ## What it does not do
 

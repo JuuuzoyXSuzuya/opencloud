@@ -59,7 +59,7 @@ public final class SettingsEntry {
                         ViewGroup.LayoutParams.WRAP_CONTENT));
 
         View divider = new View(context);
-        divider.setBackgroundColor(0xFFE6E7EA);
+        divider.setBackgroundColor(isDark(context) ? 0xFF2A2C34 : 0xFFE6E7EA);
         root.addView(divider, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(context, 1))));
 
@@ -92,11 +92,17 @@ public final class SettingsEntry {
     }
 
     private static View buildRow(final Context context, final Activity activity) {
+        boolean dark = isDark(context);
+        int background = dark ? 0xFF121218 : 0xFFFFFFFF;
+        int titleColor = dark ? 0xFFF2F3F7 : 0xFF161823;
+        int subtitleColor = dark ? 0xFF9BA1AD : 0xFF8A8B91;
+        int arrowColor = dark ? 0xFF7C8494 : 0xFFB0B2B8;
+
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(context, 20), dp(context, 14), dp(context, 16), dp(context, 14));
-        row.setBackgroundColor(Color.WHITE);
+        row.setBackgroundColor(background);
         row.setClickable(true);
         row.setFocusable(true);
 
@@ -106,15 +112,15 @@ public final class SettingsEntry {
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
 
         TextView title = new TextView(context);
-        title.setText("Выбор региона");
+        title.setText("Настройки OpenCloud");
         title.setTextSize(16);
         title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setTextColor(0xFF161823);
+        title.setTextColor(titleColor);
         labels.addView(title);
 
         TextView subtitle = new TextView(context);
         subtitle.setTextSize(13);
-        subtitle.setTextColor(0xFF8A8B91);
+        subtitle.setTextColor(subtitleColor);
         subtitle.setPadding(0, dp(context, 2), 0, 0);
         subtitle.setText(caption(activity));
         labels.addView(subtitle);
@@ -123,7 +129,7 @@ public final class SettingsEntry {
         TextView arrow = new TextView(context);
         arrow.setText("\u203A");
         arrow.setTextSize(26);
-        arrow.setTextColor(0xFFB0B2B8);
+        arrow.setTextColor(arrowColor);
         row.addView(arrow);
 
         row.setOnClickListener(new View.OnClickListener() {
@@ -182,5 +188,18 @@ public final class SettingsEntry {
     private static int dp(Context context, int value) {
         float scale = context.getResources().getDisplayMetrics().density;
         return Math.round(value * scale);
+    }
+
+    private static boolean isDark(Context context) {
+        try {
+            if (Plugins.darkTheme(context)) {
+                return true;
+            }
+        } catch (Throwable ignored) {
+            // Fall through to the system setting.
+        }
+        int mode = context.getResources().getConfiguration().uiMode
+                & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+        return mode == android.content.res.Configuration.UI_MODE_NIGHT_YES;
     }
 }

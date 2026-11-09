@@ -1,0 +1,11 @@
+{
+  "id": "dark-us-tmobile",
+  "name": "Dark US — T-Mobile",
+  "version": 1,
+  "author": "OpenCloud",
+  "description": "Тёмная тема TikTok и регион США, оператор T-Mobile (310260).",
+  "actions": [
+    { "type": "dark_theme", "enabled": true },
+    { "type": "region", "country": "us", "operator": "310260" }
+  ]
+}

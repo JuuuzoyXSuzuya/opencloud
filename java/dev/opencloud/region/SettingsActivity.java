@@ -3,9 +3,12 @@ package dev.opencloud.region;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
 import android.view.WindowInsets;
 import android.widget.AdapterView;
@@ -18,6 +21,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +34,8 @@ import java.util.List;
  * system night mode.
  */
 public final class SettingsActivity extends Activity {
+    private static final int REQUEST_PLUGIN = 41;
+
     private CheckBox toggle;
     private TextView summary;
 
@@ -38,6 +44,7 @@ public final class SettingsActivity extends Activity {
     private int colorFg;
     private int colorMuted;
     private int colorCard;
+    private int colorCardButton;
     private int colorStroke;
     private int colorAccent;
 
@@ -47,7 +54,7 @@ public final class SettingsActivity extends Activity {
         setTheme(dark ? android.R.style.Theme_DeviceDefault
                 : android.R.style.Theme_DeviceDefault_Light);
         super.onCreate(saved);
-        setTitle("OpenCloud");
+        setTitle("Настройки OpenCloud");
         applyPalette();
 
         int edge = pixels(20);
@@ -57,7 +64,7 @@ public final class SettingsActivity extends Activity {
         column.setBackgroundColor(colorBg);
 
         TextView title = new TextView(this);
-        title.setText("OpenCloud");
+        title.setText("Настройки OpenCloud");
         title.setTextSize(26);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setTextColor(colorFg);
@@ -91,9 +98,9 @@ public final class SettingsActivity extends Activity {
         card.setOrientation(1);
         card.setPadding(pixels(16), pixels(16), pixels(16), pixels(16));
         GradientDrawable background = new GradientDrawable();
-        background.setColor(colorCard);
+        background.setColor(colorCardButton);
         background.setCornerRadius(pixels(12));
-        background.setStroke(pixels(1), colorStroke);
+        background.setStroke(pixels(2), colorAccent);
         card.setBackground(background);
         card.setClickable(true);
         card.setFocusable(true);
@@ -110,7 +117,7 @@ public final class SettingsActivity extends Activity {
         cardTitle.setText("Выбор региона");
         cardTitle.setTextSize(18);
         cardTitle.setTypeface(Typeface.DEFAULT_BOLD);
-        cardTitle.setTextColor(colorFg);
+        cardTitle.setTextColor(colorAccent);
         card.addView(cardTitle);
 
         summary = new TextView(this);
@@ -139,6 +146,43 @@ public final class SettingsActivity extends Activity {
         Plugins.Descriptor[] plugins = Plugins.all();
         for (int i = 0; i < plugins.length; i++) {
             column.addView(pluginRow(plugins[i]));
+        }
+
+        column.addView(section("Кастомные плагины"));
+
+        TextView customIntro = new TextView(this);
+        customIntro.setText("Файлы .oc: зашифрованные пресеты. Импорт добавляет их в список, "
+                + "применение переключает темы и регион. Формат — docs/plugins.md.");
+        customIntro.setTextSize(13);
+        customIntro.setTextColor(colorMuted);
+        spacing(customIntro, pixels(2));
+        column.addView(customIntro);
+
+        TextView importButton = accentButton("Импортировать .oc");
+        spacing(importButton, pixels(12));
+        importButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("*/*");
+                startActivityForResult(intent, REQUEST_PLUGIN);
+            }
+        });
+        column.addView(importButton);
+
+        List<PluginStore.Plugin> custom = PluginStore.installed(this);
+        if (custom.isEmpty()) {
+            TextView empty = new TextView(this);
+            empty.setText("Пока ничего не импортировано.");
+            empty.setTextSize(13);
+            empty.setTextColor(colorMuted);
+            spacing(empty, pixels(10));
+            column.addView(empty);
+        } else {
+            for (int i = 0; i < custom.size(); i++) {
+                column.addView(customPluginRow(custom.get(i)));
+            }
         }
 
         TextView note = new TextView(this);
@@ -176,6 +220,7 @@ public final class SettingsActivity extends Activity {
             colorFg = 0xFFF2F3F7;
             colorMuted = 0xFF9BA1AD;
             colorCard = 0xFF1B1C22;
+            colorCardButton = 0xFF0F2B33;
             colorStroke = 0xFF2C2E38;
             colorAccent = 0xFF22D3EE;
         } else {
@@ -183,6 +228,7 @@ public final class SettingsActivity extends Activity {
             colorFg = 0xFF17181C;
             colorMuted = 0xFF5C6270;
             colorCard = 0xFFF0F1F3;
+            colorCardButton = 0xFFE6F7FA;
             colorStroke = 0xFFD0D3D8;
             colorAccent = 0xFF0E7490;
         }
@@ -238,6 +284,156 @@ public final class SettingsActivity extends Activity {
         description.setPadding(pixels(2), 0, 0, 0);
         row.addView(description);
         return row;
+    }
+
+    private View customPluginRow(final PluginStore.Plugin plugin) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(1);
+        card.setPadding(pixels(14), pixels(14), pixels(14), pixels(14));
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(colorCard);
+        background.setCornerRadius(pixels(12));
+        background.setStroke(pixels(1), colorStroke);
+        card.setBackground(background);
+        spacing(card, pixels(12));
+
+        TextView name = new TextView(this);
+        name.setText(plugin.name + "   v" + plugin.version);
+        name.setTextSize(16);
+        name.setTypeface(Typeface.DEFAULT_BOLD);
+        name.setTextColor(colorFg);
+        card.addView(name);
+
+        if (plugin.author.length() > 0) {
+            TextView author = new TextView(this);
+            author.setText(plugin.author);
+            author.setTextSize(12);
+            author.setTextColor(colorAccent);
+            author.setPadding(0, pixels(2), 0, 0);
+            card.addView(author);
+        }
+
+        TextView description = new TextView(this);
+        description.setText(plugin.description);
+        description.setTextSize(13);
+        description.setTextColor(colorMuted);
+        description.setPadding(0, pixels(6), 0, 0);
+        card.addView(description);
+
+        TextView meta = new TextView(this);
+        meta.setText("id: " + plugin.id + " • действий: " + plugin.actions.length());
+        meta.setTextSize(11);
+        meta.setTextColor(colorMuted);
+        meta.setPadding(0, pixels(6), 0, 0);
+        card.addView(meta);
+
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        buttons.setGravity(Gravity.CENTER_VERTICAL);
+        spacing(buttons, pixels(12));
+
+        TextView apply = accentButton("Применить");
+        apply.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                int applied = PluginStore.apply(SettingsActivity.this, plugin);
+                Toast.makeText(SettingsActivity.this,
+                        "Применено действий: " + applied, Toast.LENGTH_SHORT).show();
+                recreate();
+            }
+        });
+        buttons.addView(apply, new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
+
+        TextView delete = outlineButton("Удалить");
+        LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+        deleteParams.leftMargin = pixels(10);
+        delete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                PluginStore.delete(SettingsActivity.this, plugin);
+                Toast.makeText(SettingsActivity.this,
+                        "Плагин удалён", Toast.LENGTH_SHORT).show();
+                recreate();
+            }
+        });
+        buttons.addView(delete, deleteParams);
+        card.addView(buttons);
+        return card;
+    }
+
+    private TextView accentButton(String label) {
+        TextView button = new TextView(this);
+        button.setText(label);
+        button.setTextSize(15);
+        button.setTypeface(Typeface.DEFAULT_BOLD);
+        button.setGravity(Gravity.CENTER);
+        button.setPadding(pixels(16), pixels(11), pixels(16), pixels(11));
+        button.setTextColor(dark ? 0xFF06121A : 0xFFFFFFFF);
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(colorAccent);
+        background.setCornerRadius(pixels(10));
+        button.setBackground(background);
+        button.setClickable(true);
+        button.setFocusable(true);
+        return button;
+    }
+
+    private TextView outlineButton(String label) {
+        TextView button = new TextView(this);
+        button.setText(label);
+        button.setTextSize(15);
+        button.setTypeface(Typeface.DEFAULT_BOLD);
+        button.setGravity(Gravity.CENTER);
+        button.setPadding(pixels(16), pixels(10), pixels(16), pixels(10));
+        button.setTextColor(colorAccent);
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(0x00000000);
+        background.setCornerRadius(pixels(10));
+        background.setStroke(pixels(2), colorAccent);
+        button.setBackground(background);
+        button.setClickable(true);
+        button.setFocusable(true);
+        return button;
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_PLUGIN || resultCode != RESULT_OK || data == null) {
+            return;
+        }
+        Uri uri = data.getData();
+        if (uri == null) {
+            return;
+        }
+        InputStream input = null;
+        try {
+            input = getContentResolver().openInputStream(uri);
+            if (input == null) {
+                throw new IllegalStateException("cannot open the selected file");
+            }
+            PluginStore.Plugin plugin = PluginStore.importFrom(this, input);
+            Toast.makeText(this, "Импортирован: " + plugin.name,
+                    Toast.LENGTH_SHORT).show();
+            recreate();
+        } catch (Throwable error) {
+            String message = error.getMessage();
+            if (message == null || message.length() == 0) {
+                message = error.getClass().getSimpleName();
+            }
+            Toast.makeText(this, "Не удалось импортировать .oc: " + message,
+                    Toast.LENGTH_LONG).show();
+        } finally {
+            if (input != null) {
+                try {
+                    input.close();
+                } catch (Throwable ignored) {
+                    // Nothing useful to do here.
+                }
+            }
+        }
     }
 
     /**
