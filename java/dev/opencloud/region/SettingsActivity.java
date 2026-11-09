@@ -42,6 +42,7 @@ import java.util.Locale;
  */
 public final class SettingsActivity extends Activity {
     private static final int REQUEST_PLUGIN = 41;
+    private static final int REQUEST_EXPORT = 42;
 
     private CompoundButton toggle;
     private TextView summary;
@@ -150,6 +151,30 @@ public final class SettingsActivity extends Activity {
         cardHint.setPadding(0, pixels(8), 0, 0);
         card.addView(cardHint);
 
+        column.addView(section("Тема TikTok"));
+
+        TextView themeIntro = new TextView(this);
+        themeIntro.setText("Принудительный режим оформления TikTok. «Системная» — как в Android.");
+        themeIntro.setTextSize(13);
+        themeIntro.setTextColor(colorMuted);
+        spacing(themeIntro, pixels(2));
+        column.addView(themeIntro);
+
+        int mode = ThemePlugin.forcedMode(this);
+        if (mode == ThemePlugin.AUTO) {
+            mode = ThemePlugin.isDark(this) ? ThemePlugin.DARK : ThemePlugin.FOLLOW_SYSTEM;
+        }
+        LinearLayout themeRow = new LinearLayout(this);
+        themeRow.setOrientation(LinearLayout.HORIZONTAL);
+        spacing(themeRow, pixels(10));
+        themeRow.addView(themeSegment("Системная", ThemePlugin.FOLLOW_SYSTEM, mode),
+                segmentParams(0));
+        themeRow.addView(themeSegment("Светлая", ThemePlugin.LIGHT, mode),
+                segmentParams(8));
+        themeRow.addView(themeSegment("Тёмная", ThemePlugin.DARK, mode),
+                segmentParams(8));
+        column.addView(themeRow);
+
         column.addView(section("Функции"));
 
         TextView pluginIntro = new TextView(this);
@@ -162,6 +187,9 @@ public final class SettingsActivity extends Activity {
 
         Plugins.Descriptor[] plugins = Plugins.all();
         for (int i = 0; i < plugins.length; i++) {
+            if (Plugins.DARK_THEME.equals(plugins[i].id)) {
+                continue; // handled by the TikTok theme selector above
+            }
             column.addView(pluginRow(plugins[i]));
         }
 
@@ -183,10 +211,25 @@ public final class SettingsActivity extends Activity {
                 Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
                 intent.setType("*/*");
+                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
                 startActivityForResult(intent, REQUEST_PLUGIN);
             }
         });
         column.addView(importButton);
+
+        TextView exportButton = outlineButton("Экспортировать настройки в .oc");
+        spacing(exportButton, pixels(10));
+        exportButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("application/octet-stream");
+                intent.putExtra(Intent.EXTRA_TITLE, exportName());
+                startActivityForResult(intent, REQUEST_EXPORT);
+            }
+        });
+        column.addView(exportButton);
 
         List<PluginStore.Plugin> custom = PluginStore.installed(this);
         if (custom.isEmpty()) {
@@ -209,6 +252,18 @@ public final class SettingsActivity extends Activity {
         note.setTextColor(colorMuted);
         spacing(note, pixels(20));
         column.addView(note);
+
+        column.addView(section("Сброс"));
+
+        TextView reset = outlineButton("Сбросить настройки OpenCloud");
+        spacing(reset, pixels(6));
+        reset.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                confirmReset();
+            }
+        });
+        column.addView(reset);
 
         ScrollView frame = new ScrollView(this);
         frame.setBackgroundColor(colorBg);
@@ -240,9 +295,7 @@ public final class SettingsActivity extends Activity {
 
     private boolean detectDark() {
         try {
-            if (Plugins.darkTheme(this)) {
-                return true;
-            }
+            return ThemePlugin.isDark(this);
         } catch (Throwable ignored) {
             // Fall through to the system setting.
         }
@@ -401,6 +454,43 @@ public final class SettingsActivity extends Activity {
         return card;
     }
 
+    private LinearLayout.LayoutParams segmentParams(int leftMargin) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+        params.leftMargin = pixels(leftMargin);
+        return params;
+    }
+
+    private TextView themeSegment(String label, final int value, int current) {
+        boolean selected = value == current;
+        TextView button = new TextView(this);
+        button.setText(label);
+        button.setTextSize(14);
+        button.setTypeface(Typeface.DEFAULT_BOLD);
+        button.setGravity(Gravity.CENTER);
+        button.setPadding(pixels(8), pixels(12), pixels(8), pixels(12));
+        if (selected) {
+            button.setTextColor(colorOnCardButton);
+            button.setBackground(ripple(colorCardButton, 20, 0, 0,
+                    withAlpha(colorOnCardButton, 0.20f)));
+        } else {
+            button.setTextColor(colorFg);
+            button.setBackground(ripple(0x00000000, 20, 1, colorStroke,
+                    withAlpha(colorAccent, 0.12f)));
+        }
+        button.setClickable(true);
+        button.setFocusable(true);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                ThemePlugin.setForcedMode(SettingsActivity.this, value);
+                ThemePlugin.refresh();
+                recreate();
+            }
+        });
+        return button;
+    }
+
     private GradientDrawable shape(int fill, int radius, int strokeWidth, int strokeColor) {
         GradientDrawable drawable = new GradientDrawable();
         drawable.setColor(fill);
@@ -450,39 +540,157 @@ public final class SettingsActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode != REQUEST_PLUGIN || resultCode != RESULT_OK || data == null) {
+        if (resultCode != RESULT_OK || data == null) {
             return;
         }
+        if (requestCode == REQUEST_PLUGIN) {
+            handleImport(data);
+        } else if (requestCode == REQUEST_EXPORT) {
+            handleExport(data);
+        }
+    }
+
+    private void handleImport(Intent data) {
+        int imported = 0;
+        String lastError = null;
+        android.content.ClipData clip = data.getClipData();
+        if (clip != null) {
+            for (int i = 0; i < clip.getItemCount(); i++) {
+                Uri uri = clip.getItemAt(i).getUri();
+                try {
+                    importUri(uri);
+                    imported++;
+                } catch (Throwable error) {
+                    lastError = describe(error);
+                }
+            }
+        } else if (data.getData() != null) {
+            try {
+                importUri(data.getData());
+                imported = 1;
+            } catch (Throwable error) {
+                lastError = describe(error);
+            }
+        }
+        if (imported == 0) {
+            Toast.makeText(this, "Не удалось импортировать .oc: "
+                    + (lastError == null ? "файл не выбран" : lastError),
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+        Toast.makeText(this, imported == 1 ? "Плагин импортирован"
+                : "Импортировано плагинов: " + imported, Toast.LENGTH_SHORT).show();
+        recreate();
+    }
+
+    private void importUri(Uri uri) throws Exception {
+        InputStream input = getContentResolver().openInputStream(uri);
+        if (input == null) {
+            throw new IllegalStateException("cannot open the selected file");
+        }
+        try {
+            PluginStore.importFrom(this, input);
+        } finally {
+            try {
+                input.close();
+            } catch (Throwable ignored) {
+                // Nothing useful to do here.
+            }
+        }
+    }
+
+    private void handleExport(Intent data) {
         Uri uri = data.getData();
         if (uri == null) {
             return;
         }
-        InputStream input = null;
+        java.io.OutputStream output = null;
         try {
-            input = getContentResolver().openInputStream(uri);
-            if (input == null) {
-                throw new IllegalStateException("cannot open the selected file");
+            byte[] bytes = PluginCrypto.encode(buildExportJson().toString(2));
+            output = getContentResolver().openOutputStream(uri);
+            if (output == null) {
+                throw new IllegalStateException("cannot open the destination");
             }
-            PluginStore.Plugin plugin = PluginStore.importFrom(this, input);
-            Toast.makeText(this, "Импортирован: " + plugin.name,
-                    Toast.LENGTH_SHORT).show();
-            recreate();
+            output.write(bytes);
+            output.flush();
+            Toast.makeText(this, "Настройки сохранены в .oc", Toast.LENGTH_SHORT).show();
         } catch (Throwable error) {
-            String message = error.getMessage();
-            if (message == null || message.length() == 0) {
-                message = error.getClass().getSimpleName();
-            }
-            Toast.makeText(this, "Не удалось импортировать .oc: " + message,
+            Toast.makeText(this, "Не удалось сохранить .oc: " + describe(error),
                     Toast.LENGTH_LONG).show();
         } finally {
-            if (input != null) {
+            if (output != null) {
                 try {
-                    input.close();
+                    output.close();
                 } catch (Throwable ignored) {
                     // Nothing useful to do here.
                 }
             }
         }
+    }
+
+    private String exportName() {
+        Profile profile = currentProfile();
+        String suffix = profile == null ? "preset" : profile.code() + "-" + profile.numeric();
+        return "opencloud-" + suffix + ".oc";
+    }
+
+    private org.json.JSONObject buildExportJson() throws Exception {
+        Profile profile = currentProfile();
+        org.json.JSONObject root = new org.json.JSONObject();
+        root.put("id", "export-" + (profile == null ? "preset" : profile.code() + "-" + profile.numeric()));
+        root.put("name", profile == null ? "OpenCloud preset"
+                : profile.country() + " — " + profile.operator());
+        root.put("version", 1);
+        root.put("author", "OpenCloud");
+        root.put("description", "Экспорт настроек OpenCloud.");
+        org.json.JSONArray actions = new org.json.JSONArray();
+        org.json.JSONObject theme = new org.json.JSONObject();
+        theme.put("type", "dark_theme");
+        theme.put("enabled", ThemePlugin.isDark(this));
+        actions.put(theme);
+        if (profile != null) {
+            org.json.JSONObject region = new org.json.JSONObject();
+            region.put("type", "region");
+            region.put("country", profile.code());
+            region.put("operator", profile.numeric());
+            actions.put(region);
+        }
+        root.put("actions", actions);
+        return root;
+    }
+
+    private Profile currentProfile() {
+        Profile profile = Atlas.find(Config.selectedIso(this), Config.selectedOperator(this));
+        return profile == null ? Atlas.defaultProfile() : profile;
+    }
+
+    private String describe(Throwable error) {
+        String message = error.getMessage();
+        if (message == null || message.length() == 0) {
+            message = error.getClass().getSimpleName();
+        }
+        return message;
+    }
+
+    private void confirmReset() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this,
+                dark ? android.R.style.Theme_DeviceDefault_Dialog_Alert
+                        : android.R.style.Theme_DeviceDefault_Light_Dialog_Alert);
+        builder.setTitle("Сбросить настройки?");
+        builder.setMessage("Будут удалены выбранный регион, тема и все импортированные .oc плагины.");
+        builder.setPositiveButton("Сбросить", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                Prefs.open(SettingsActivity.this).edit().clear().apply();
+                PluginStore.deleteAll(SettingsActivity.this);
+                ThemePlugin.refresh();
+                Toast.makeText(SettingsActivity.this, "Настройки сброшены",
+                        Toast.LENGTH_SHORT).show();
+                recreate();
+            }
+        });
+        builder.setNegativeButton("Отмена", null);
+        builder.show();
     }
 
     /**

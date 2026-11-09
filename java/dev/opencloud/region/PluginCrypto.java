@@ -6,6 +6,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
@@ -32,8 +33,7 @@ final class PluginCrypto {
     private PluginCrypto() {
     }
 
-    static String decode(InputStream input) throws Exception {
-        byte[] data = readAll(input);
+    static String decode(InputStream input) throws Exception {        byte[] data = readAll(input);
         if (data.length < MAGIC.length + NONCE + TAG) {
             throw new IllegalArgumentException("file is too short for a .oc plugin");
         }
@@ -50,6 +50,25 @@ final class PluginCrypto {
                 new GCMParameterSpec(TAG * 8, nonce));
         byte[] plain = cipher.doFinal(data, offset, data.length - offset);
         return new String(plain, "UTF-8");
+    }
+
+    /** Encrypts JSON into the .oc container (export from the app). */
+    static byte[] encode(String json) throws Exception {
+        byte[] plain = json.getBytes("UTF-8");
+        if (plain.length > MAX_PLUGIN_BYTES) {
+            throw new IllegalArgumentException("plugin is larger than 1 MB");
+        }
+        byte[] nonce = new byte[NONCE];
+        new SecureRandom().nextBytes(nonce);
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key(), "AES"),
+                new GCMParameterSpec(TAG * 8, nonce));
+        byte[] ciphertext = cipher.doFinal(plain);
+        byte[] out = new byte[MAGIC.length + NONCE + ciphertext.length];
+        System.arraycopy(MAGIC, 0, out, 0, MAGIC.length);
+        System.arraycopy(nonce, 0, out, MAGIC.length, NONCE);
+        System.arraycopy(ciphertext, 0, out, MAGIC.length + NONCE, ciphertext.length);
+        return out;
     }
 
     private static byte[] key() throws Exception {

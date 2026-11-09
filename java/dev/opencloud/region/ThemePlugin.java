@@ -23,25 +23,67 @@ final class ThemePlugin {
     static final int LIGHT = 1;
     static final int DARK = 2;
 
+    /** No explicit override: fall back to the dark-theme switch / TikTok's own mode. */
+    static final int AUTO = -1;
+
     private ThemePlugin() {
     }
 
     /** Called from the patched X.005C.LJJIII(int) body. */
     static int mode(int requested) {
         Context context = App.context();
-        if (context != null && Plugins.darkTheme(context)) {
-            return DARK;
+        if (context != null) {
+            int forced = forcedMode(context);
+            if (forced >= FOLLOW_SYSTEM && forced <= 3) {
+                return forced;
+            }
+            if (Plugins.darkTheme(context)) {
+                return DARK;
+            }
         }
         return requested;
     }
 
-    /** Re-apply the theme after the switch changed. */
+    /** The appearance the user picked for TikTok, or AUTO when unset. */
+    static int forcedMode(Context context) {
+        if (context == null) {
+            return AUTO;
+        }
+        return Prefs.open(context).getInt(Prefs.THEME_MODE, AUTO);
+    }
+
+    static void setForcedMode(Context context, int mode) {
+        if (context == null) {
+            return;
+        }
+        Prefs.open(context).edit().putInt(Prefs.THEME_MODE, mode).apply();
+        Plugins.setEnabled(context, Plugins.DARK_THEME, mode == DARK);
+    }
+
+    /** True when OpenCloud should draw its own UI dark. */
+    static boolean isDark(Context context) {
+        int forced = forcedMode(context);
+        if (forced >= FOLLOW_SYSTEM) {
+            return forced == DARK || (forced == 3 && isSystemDark(context));
+        }
+        return Plugins.darkTheme(context);
+    }
+
+    private static boolean isSystemDark(Context context) {
+        int mode = context.getResources().getConfiguration().uiMode
+                & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+        return mode == android.content.res.Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    /** Re-apply the theme after the choice changed. */
     static void refresh() {
         Context context = App.context();
         if (context == null) {
             return;
         }
-        int mode = Plugins.darkTheme(context) ? DARK : storedMode(context);
+        int forced = forcedMode(context);
+        int mode = forced >= FOLLOW_SYSTEM ? forced
+                : (Plugins.darkTheme(context) ? DARK : storedMode(context));
         try {
             Class<?> owner = Class.forName(CONTROLLER);
             owner.getMethod(APPLY, int.class).invoke(null, mode);

@@ -67,6 +67,10 @@ The OpenCloud screen has a **"Функции"** section. A plugin is either:
   list for reference (currently the browser Google login and the TikTok
   settings row).
 
+Above it, **"Тема TikTok"** offers three Material 3 segments — системная,
+светлая, тёмная — and forces the selected appearance through the same hook.
+The OpenCloud UI itself follows that choice.
+
 Runtime plugins available now:
 
 | Plugin | What it does |
@@ -95,7 +99,9 @@ section that imports encrypted `.oc` presets:
 - the decrypted payload is a JSON preset (metadata + a list of actions:
   `dark_theme`, `region`, built-in `plugin`);
 - imported presets are stored as JSON in the app-private
-  `files/opencloud/plugins/` directory and can be applied or deleted.
+  `files/opencloud/plugins/` directory and can be applied or deleted;
+- several files can be imported at once, and the current region + theme can be
+  exported back to a `.oc` file.
 
 Create one with the bundled tool:
 

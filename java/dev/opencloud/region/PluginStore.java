@@ -115,6 +115,18 @@ final class PluginStore {
         return plugin.file.delete();
     }
 
+    static void deleteAll(Context context) {
+        File[] files = directory(context).listFiles();
+        if (files == null) {
+            return;
+        }
+        for (File file : files) {
+            if (file.getName().endsWith(".json")) {
+                file.delete();
+            }
+        }
+    }
+
     /** Applies every supported action; returns how many ran. */
     static int apply(Context context, Plugin plugin) {
         int applied = 0;
@@ -126,7 +138,8 @@ final class PluginStore {
             String type = action.optString("type", "");
             if ("dark_theme".equals(type)) {
                 boolean enabled = action.optBoolean("enabled", true);
-                Plugins.setEnabled(context, Plugins.DARK_THEME, enabled);
+                ThemePlugin.setForcedMode(context,
+                        enabled ? ThemePlugin.DARK : ThemePlugin.FOLLOW_SYSTEM);
                 ThemePlugin.refresh();
                 applied++;
             } else if ("plugin".equals(type)) {
