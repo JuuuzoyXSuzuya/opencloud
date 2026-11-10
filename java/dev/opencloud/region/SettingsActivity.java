@@ -67,7 +67,7 @@ public final class SettingsActivity extends Activity {
         setTheme(dark ? android.R.style.Theme_DeviceDefault
                 : android.R.style.Theme_DeviceDefault_Light);
         super.onCreate(saved);
-        setTitle("Настройки OpenCloud");
+        setTitle("Мод OpenCloud");
         applyPalette();
 
         int edge = pixels(20);
@@ -76,20 +76,46 @@ public final class SettingsActivity extends Activity {
         column.setPadding(edge, edge, edge, edge);
         column.setBackgroundColor(colorBg);
 
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.HORIZONTAL);
+        header.setGravity(Gravity.CENTER_VERTICAL);
+
         TextView title = new TextView(this);
-        title.setText("Настройки OpenCloud");
+        title.setText("Мод OpenCloud");
         title.setTextSize(24);
         title.setLetterSpacing(-0.01f);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setTextColor(colorFg);
-        column.addView(title);
+        header.addView(title, new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
+
+        TextView badge = new TextView(this);
+        badge.setText("MOD");
+        badge.setTextSize(11);
+        badge.setTypeface(Typeface.DEFAULT_BOLD);
+        badge.setLetterSpacing(0.14f);
+        badge.setGravity(Gravity.CENTER);
+        badge.setTextColor(colorOnAccent);
+        badge.setPadding(pixels(9), pixels(4), pixels(9), pixels(4));
+        badge.setBackground(shape(colorAccent, 20, 0, 0));
+        header.addView(badge);
+        column.addView(header);
 
         TextView intro = new TextView(this);
-        intro.setText("Регион, тема и дополнительные функции для TikTok.");
+        intro.setText("Это мод, встроенный в TikTok. Регион, тема, шрифт и плагины "
+                + "меняются внутри самого TikTok — отдельного приложения нет.");
         intro.setTextSize(14);
         intro.setTextColor(colorMuted);
         spacing(intro, pixels(6));
         column.addView(intro);
+
+        TextView built = new TextView(this);
+        built.setText("Встроен в TikTok " + tiktokVersion());
+        built.setTextSize(12);
+        built.setTextColor(colorMuted);
+        built.setLetterSpacing(0.04f);
+        spacing(built, pixels(4));
+        column.addView(built);
 
         TextView regionTitle = section("Регион");
         column.addView(regionTitle);
@@ -181,7 +207,7 @@ public final class SettingsActivity extends Activity {
         column.addView(section("Шрифт"));
 
         TextView fontIntro = new TextView(this);
-        fontIntro.setText("Системный шрифт или свой файл .ttf/.otf. OpenCloud применяет его сразу, "
+        fontIntro.setText("Системный шрифт или свой файл .ttf/.otf. Мод применяет его сразу, "
                 + "TikTok — при включённом переключателе и после перезапуска.");
         fontIntro.setTextSize(13);
         fontIntro.setTextColor(colorMuted);
@@ -309,7 +335,7 @@ public final class SettingsActivity extends Activity {
 
         column.addView(section("Сброс"));
 
-        TextView reset = outlineButton("Сбросить настройки OpenCloud");
+        TextView reset = outlineButton("Сбросить настройки мода");
         spacing(reset, pixels(6));
         reset.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -774,6 +800,14 @@ public final class SettingsActivity extends Activity {
     protected void onResume() {
         super.onResume();
         SettingsEntry.refreshCaption();
+    }
+
+    private String tiktokVersion() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Throwable error) {
+            return "";
+        }
     }
 
     private void updateSummary() {

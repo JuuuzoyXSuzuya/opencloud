@@ -13,7 +13,7 @@ from . import __version__, axml, catalog, patcher, toolchain
 
 ROOT = Path(__file__).resolve().parent.parent
 SETTINGS_CLASS = "dev.opencloud.region.SettingsActivity"
-SETTINGS_LABEL = "OpenCloud"
+SETTINGS_LABEL = "OpenCloud Mod"
 MANIFEST = "AndroidManifest.xml"
 PROFILE_NAMES = ("assets/dexopt/baseline.prof", "assets/dexopt/baseline.profm")
 SIGNATURE_SUFFIXES = (".SF", ".RSA", ".DSA", ".EC")

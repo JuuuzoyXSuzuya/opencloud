@@ -10,7 +10,7 @@ taken from MargyT, and it does not use the Margy/MargyT name or artwork.
 
 The patched build still has TikTok's package name. Uninstall the official
 TikTok first, then install the OpenCloud build. A second launcher icon named
-**OpenCloud** opens the region settings.
+**OpenCloud Mod** opens the mod settings.
 
 ## What it does
 

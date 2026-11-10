@@ -133,7 +133,7 @@ public final class SettingsEntry {
                 0, ViewGroup.LayoutParams.WRAP_CONTENT, 1.0f));
 
         TextView title = new TextView(context);
-        title.setText("Настройки OpenCloud");
+        title.setText("Мод OpenCloud");
         title.setTextSize(16);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setTextColor(titleColor);
@@ -177,9 +177,10 @@ public final class SettingsEntry {
             profile = Atlas.defaultProfile();
         }
         if (profile == null) {
-            return "Не выбран";
+            return "Мод TikTok · регион не выбран";
         }
-        return profile.country() + " — " + profile.operator() + " (" + profile.numeric() + ")";
+        return "Мод TikTok · " + profile.country() + " — " + profile.operator()
+                + " (" + profile.numeric() + ")";
     }
 
     private static Activity activityOf(Object fragment, Context context) {
