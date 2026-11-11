@@ -420,12 +420,15 @@ def rewrite(root: Path, strict: bool = False, allow_missing: bool = False) -> Re
             hits = block.count(edit.old)
             if not hits:
                 continue
-            patched = block.replace(edit.old, edit.new)
+            # Only the first occurrence is the normal return path; a Kotlin
+            # try/catch can add a second `return-object` for the error path,
+            # which must keep returning the original view untouched.
+            patched = block.replace(edit.old, edit.new, 1)
             text = text[:match.start()] + patched + text[match.end():]
             path.write_text(text, encoding="utf-8")
             changed += 1
             changed_dirs.add(directory.name)
-            counts[edit.label] = counts.get(edit.label, 0) + hits
+            counts[edit.label] = counts.get(edit.label, 0) + 1
             applied = True
         if not applied and (edit.required or strict):
             missing.append(edit.smali_path + "->" + edit.method + edit.signature)

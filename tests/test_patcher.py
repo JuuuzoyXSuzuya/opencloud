@@ -156,6 +156,28 @@ class PatcherTests(unittest.TestCase):
                           "Ljava/lang/String;", text)
             self.assertIn('const-string v0, "google_web"', text)
 
+    def test_settings_entry_wraps_only_the_normal_return(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "smali").mkdir()
+            (root / "smali" / "A.smali").write_text(sample(), encoding="utf-8")
+            fragment = (".method public final onCreateView(Landroid/view/LayoutInflater;"
+                        "Landroid/view/ViewGroup;Landroid/os/Bundle;)Landroid/view/View;\n"
+                        "    .locals 6\n\n"
+                        "    return-object v5\n"
+                        "    :catchall_0\n"
+                        "    move-exception v1\n"
+                        "    return-object v5\n"
+                        ".end method\n")
+            target = root / "smali" / patcher.SETTINGS_PATH
+            target.parent.mkdir(parents=True)
+            target.write_text(fragment, encoding="utf-8")
+            result = patcher.rewrite(root)
+            self.assertEqual(1, result.counts.get("settings entry"))
+            text = target.read_text(encoding="utf-8")
+            self.assertEqual(1, text.count("SettingsEntry;->decorate"))
+            self.assertEqual(2, text.count("return-object v5"))
+
     def test_theme_hook_is_prepended_to_the_original_body(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
