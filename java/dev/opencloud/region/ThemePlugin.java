@@ -13,7 +13,7 @@ import android.content.Context;
  * by {@link #DARK}.  {@link #refresh()} re-applies the mode immediately after
  * the user flips the switch, without restarting TikTok.
  */
-final class ThemePlugin {
+public final class ThemePlugin {
     private static final String CONTROLLER = "X.005C";
     private static final String APPLY = "LJJIII";
     private static final String TIKTOK_PREFS = "sp_dark_mode";
@@ -30,7 +30,7 @@ final class ThemePlugin {
     }
 
     /** Called from the patched X.005C.LJJIII(int) body. */
-    static int mode(int requested) {
+    public static int mode(int requested) {
         Context context = App.context();
         if (context != null) {
             int forced = forcedMode(context);
