@@ -135,3 +135,46 @@ class PatcherTests(unittest.TestCase):
             self.assertIn('const-string v0, "google_web"', text)
             self.assertIn('const-string v0, "facebook"', text)
 
+
+    def test_google_web_method_is_replaced_in_new_location(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "smali").mkdir()
+            (root / "smali" / "A.smali").write_text(sample(), encoding="utf-8")
+            original = (".method public static final LIZ(Ljava/lang/String;)Ljava/lang/String;\n"
+                        "    .locals 1\n\n"
+                        "    const-string v0, \"google\"\n"
+                        "    return-object v0\n"
+                        ".end method\n")
+            target = root / "smali" / "X" / "16ry.smali"
+            target.parent.mkdir()
+            target.write_text(original, encoding="utf-8")
+            result = patcher.rewrite(root)
+            self.assertEqual(1, result.overrides)
+            text = target.read_text(encoding="utf-8")
+            self.assertIn(".method public static final LIZ(Ljava/lang/String;)"
+                          "Ljava/lang/String;", text)
+            self.assertIn('const-string v0, "google_web"', text)
+
+    def test_theme_hook_is_prepended_to_the_original_body(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "smali").mkdir()
+            (root / "smali" / "A.smali").write_text(sample(), encoding="utf-8")
+            original = (".method public static LJJIII(I)V\n"
+                        "    .locals 2\n"
+                        "    .param p0, \"mode\"\n\n"
+                        "    const/4 v0, 0x1\n"
+                        "    sput p0, LX/005C;->LLJJI:I\n"
+                        "    return-void\n"
+                        ".end method\n")
+            target = root / "smali" / "X" / "005C.smali"
+            target.parent.mkdir()
+            target.write_text(original, encoding="utf-8")
+            result = patcher.rewrite(root)
+            self.assertEqual(1, result.counts.get("theme"))
+            text = target.read_text(encoding="utf-8")
+            self.assertIn("ThemePlugin;->mode(I)I", text)
+            self.assertIn("sput p0, LX/005C;->LLJJI:I", text)
+            self.assertLess(text.index("ThemePlugin;->mode"), text.index("sput p0"))
+            self.assertLess(text.index(".param p0"), text.index("ThemePlugin;->mode"))

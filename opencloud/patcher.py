@@ -107,11 +107,12 @@ class MethodOverride:
 # TikTok ships two Google providers in the Lobby auth library: "google"
 # (native Google Sign-In) and "google_web" (AppAuth + Custom Tabs).  The
 # native one validates the signing certificate, so it fails on a repackaged
-# APK.  LX/1DZZ.LJFF maps a requested provider id to the concrete provider;
-# making it answer "google_web" for "google" sends the login through the
-# browser, where the OAuth client is not bound to the APK signature.
+# APK.  The provider mapper (LX/1DZZ.LJFF on older releases, LX/16ry.LIZ on
+# 47.7.x) is rewritten to answer "google_web" for "google", which sends the
+# login through the browser, where the OAuth client is not bound to the APK
+# signature.
 GOOGLE_WEB_BODY = """\
-.method public static final LJFF(Ljava/lang/String;)Ljava/lang/String;
+.method public static final METHODNAME(Ljava/lang/String;)Ljava/lang/String;
     .locals 2
 
     const-string v0, "google"
@@ -150,70 +151,55 @@ GOOGLE_WEB_BODY = """\
     return-object v0
 .end method"""
 
-# LX/005C.LJJIII(int) is TikTok's central "apply appearance" entry point.
-# 0 = follow system, 1 = light, 2 = dark, 3 = scheduled.  The body below is the
-# original implementation with one hook at the top: ThemePlugin.mode() turns
-# every requested value into 2 while the dark-theme plugin is enabled, then the
-# original listener notification runs unchanged.
-THEME_BODY = """\
-.method public static LJJIII(I)V
-    .locals 2
 
+def _google_web_body(method: str) -> str:
+    return GOOGLE_WEB_BODY.replace("METHODNAME", method)
+
+# LX/005C.LJJIII(int) is TikTok's central "apply appearance" entry point.
+# Rather than replacing its body (whose private fields change between TikTok
+# releases), the hook is prepended to the original method.  ThemePlugin.mode()
+# returns the requested value unchanged when the plugin is off.
+THEME_PREFIX = """\
     invoke-static {p0}, Ldev/opencloud/region/ThemePlugin;->mode(I)I
     move-result p0
-
-    const/4 v0, -0x1
-    if-eq p0, v0, :cond_1
-    if-eqz p0, :cond_1
-    const/4 v0, 0x1
-    if-eq p0, v0, :cond_1
-    const/4 v0, 0x2
-    if-eq p0, v0, :cond_1
-    const/4 v0, 0x3
-    if-eq p0, v0, :cond_1
-    :cond_0
-    return-void
-    :cond_1
-    sget v0, LX/005C;->LLJJI:I
-    if-eq v0, p0, :cond_0
-    sput p0, LX/005C;->LLJJI:I
-    sget-object p0, LX/005C;->LLJJJIL:Ljava/lang/Object;
-    monitor-enter p0
-    :try_start_0
-    sget-object v0, LX/005C;->LLJJJ:LX/02eX;
-    invoke-virtual {v0}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
-    new-instance v1, LX/026m;
-    invoke-direct {v1, v0}, LX/026m;-><init>(LX/02eX;)V
-    :cond_2
-    :goto_0
-    invoke-virtual {v1}, LX/01h5;->hasNext()Z
-    move-result v0
-    if-eqz v0, :cond_3
-    invoke-virtual {v1}, LX/01h5;->next()Ljava/lang/Object;
-    move-result-object v0
-    check-cast v0, Ljava/lang/ref/WeakReference;
-    invoke-virtual {v0}, Ljava/lang/ref/Reference;->get()Ljava/lang/Object;
-    move-result-object v0
-    check-cast v0, LX/005C;
-    if-eqz v0, :cond_2
-    invoke-virtual {v0}, LX/005C;->LIZLLL()Z
-    goto :goto_0
-    :cond_3
-    monitor-exit p0
-    return-void
-    :catchall_0
-    move-exception v0
-    monitor-exit p0
-    :try_end_0
-    .catchall {:try_start_0 .. :try_end_0} :catchall_0
-    throw v0
-.end method"""
+"""
 
 
 METHOD_OVERRIDES: tuple[MethodOverride, ...] = (
     MethodOverride("LX/1DZZ;", "LJFF",
-                   "(Ljava/lang/String;)Ljava/lang/String;", GOOGLE_WEB_BODY),
-    MethodOverride("LX/005C;", "LJJIII", "(I)V", THEME_BODY),
+                   "(Ljava/lang/String;)Ljava/lang/String;",
+                   _google_web_body("LJFF")),
+    MethodOverride("LX/16ry;", "LIZ",
+                   "(Ljava/lang/String;)Ljava/lang/String;",
+                   _google_web_body("LIZ")),
+)
+
+
+@dataclass(frozen=True)
+class MethodPrefix:
+    """Prepend instructions to the existing body of a known smali method.
+
+    Used where the method body contains version-specific details: the original
+    code stays intact and only the hook at the top is new.
+    """
+
+    descriptor: str
+    method: str
+    signature: str
+    code: str
+    label: str
+    marker: str = ""
+    required: bool = False
+
+
+# TikTok renames its obfuscated appearance controller on almost every major
+# release, so the same hook is offered for every name seen so far.  The marker
+# check keeps a name clash from patching an unrelated method.
+METHOD_PREFIXES: tuple[MethodPrefix, ...] = (
+    MethodPrefix("LX/005C;", "LJJIII", "(I)V", THEME_PREFIX, "theme",
+                 "sput p0, LX/", False),
+    MethodPrefix("LX/004m;", "LJJIII", "(I)V", THEME_PREFIX, "theme",
+                 "sput p0, LX/", False),
 )
 
 
@@ -277,6 +263,18 @@ def _method_pattern(override: MethodOverride) -> re.Pattern[str]:
         + re.escape(override.signature)
         + r"[ \t]*\r?\n.*?^\.end method[ \t]*\r?$"
     )
+
+
+def _prefix_block(block: str, code: str) -> str:
+    lines = block.splitlines(keepends=True)
+    insert_at = 1
+    for index in range(1, len(lines)):
+        stripped = lines[index].strip()
+        if not stripped or stripped.startswith("."):
+            insert_at = index + 1
+            continue
+        break
+    return "".join(lines[:insert_at]) + code + "".join(lines[insert_at:])
 
 
 def _instance_pattern(target: InstanceTarget) -> re.Pattern[str]:
@@ -382,6 +380,31 @@ def rewrite(root: Path, strict: bool = False, allow_missing: bool = False) -> Re
         if not applied and (override.required or strict):
             missing.append(override.descriptor + "->"
                            + override.method + override.signature)
+
+    for prefix in METHOD_PREFIXES:
+        relative = prefix.descriptor[1:-1] + ".smali"
+        applied = False
+        for directory in directories:
+            path = directory / relative
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding="utf-8")
+            match = _method_block(text, prefix.method, prefix.signature)
+            if match is None:
+                continue
+            block = match.group(0)
+            if prefix.marker and prefix.marker not in block:
+                continue
+            patched = _prefix_block(block, prefix.code)
+            text = text[:match.start()] + patched + text[match.end():]
+            path.write_text(text, encoding="utf-8")
+            changed += 1
+            changed_dirs.add(directory.name)
+            counts[prefix.label] = counts.get(prefix.label, 0) + 1
+            applied = True
+        if not applied and (prefix.required or strict):
+            missing.append(prefix.descriptor + "->"
+                           + prefix.method + prefix.signature)
 
     for edit in FILE_EDITS:
         applied = False
