@@ -459,9 +459,6 @@ public final class SettingsActivity extends Activity {
                     if (Plugins.DARK_THEME.equals(plugin.id)) {
                         ThemePlugin.refresh();
                     }
-                    if (checked && Plugins.LOG_HELLO.equals(plugin.id)) {
-                        Logs.write("plugin/log_hello", "hello world");
-                    }
                     recreate();
                 }
             });

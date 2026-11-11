@@ -17,7 +17,6 @@ import android.content.SharedPreferences;
 final class Plugins {
     static final String DARK_THEME = "dark_theme";
     static final String FONT = "custom_font";
-    static final String LOG_HELLO = "log_hello";
     private static final String PREFIX = "plugin_";
 
     static final class Descriptor {
@@ -47,12 +46,6 @@ final class Plugins {
                     FONT,
                     "Свой шрифт",
                     "Заменяет шрифт TikTok выбранным системным или импортированным файлом.",
-                    true, false),
-            new Descriptor(
-                    LOG_HELLO,
-                    "Тестовый плагин: hello world",
-                    "Пишет «hello world» в логи при каждом запуске TikTok и при включении. "
-                            + "Нужен для проверки, что логи работают.",
                     true, false),
             new Descriptor(
                     "browser_google",
