@@ -26,6 +26,8 @@ TikTok first, then install the OpenCloud build. A second launcher icon named
 - Adds one extra `classesN.dex` with the bridge and the settings screen.
 - Rewrites `Typeface.create*` call sites to a font bridge, so TikTok can use a
   system font or a user-supplied `.ttf`/`.otf`.
+- Keeps a small diagnostic log (font hook failures and uncaught crashes)
+  that can be read or copied from **Логи** in the mod settings.
 - Adds an **OpenCloud** launcher activity to the manifest without touching
   TikTok's resource table.
 - Makes TikTok use its **browser-based Google login** (`google_web`, AppAuth +

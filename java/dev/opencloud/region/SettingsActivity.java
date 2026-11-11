@@ -2,6 +2,8 @@ package dev.opencloud.region;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.res.ColorStateList;
@@ -332,6 +334,26 @@ public final class SettingsActivity extends Activity {
         note.setTextColor(colorMuted);
         spacing(note, pixels(20));
         column.addView(note);
+
+        column.addView(section("Логи"));
+
+        TextView logIntro = new TextView(this);
+        logIntro.setText("Ошибки мода и аварийные завершения. Если TikTok вылетает — "
+                + "лог останется здесь после следующего запуска.");
+        logIntro.setTextSize(13);
+        logIntro.setTextColor(colorMuted);
+        spacing(logIntro, pixels(2));
+        column.addView(logIntro);
+
+        TextView showLogs = outlineButton("Открыть логи");
+        spacing(showLogs, pixels(12));
+        showLogs.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                showLogsDialog();
+            }
+        });
+        column.addView(showLogs);
 
         column.addView(section("Сброс"));
 
@@ -995,6 +1017,49 @@ public final class SettingsActivity extends Activity {
         });
         builder.setNegativeButton("Отмена", null);
         builder.show();
+    }
+
+    private void showLogsDialog() {
+        final String text = Logs.read();
+        TextView body = new TextView(this);
+        body.setText(text.length() == 0 ? "Пока пусто." : text);
+        body.setTextSize(11);
+        body.setTypeface(Typeface.MONOSPACE);
+        body.setTextColor(colorFg);
+        body.setTextIsSelectable(true);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setPadding(pixels(16), pixels(8), pixels(16), pixels(8));
+        scroll.addView(body);
+
+        new AlertDialog.Builder(this,
+                dark ? android.R.style.Theme_DeviceDefault_Dialog_Alert
+                        : android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
+                .setTitle("Логи")
+                .setView(scroll)
+                .setPositiveButton("Копировать", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        ClipboardManager clipboard =
+                                (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                        if (clipboard == null) {
+                            return;
+                        }
+                        clipboard.setPrimaryClip(ClipData.newPlainText("OpenCloud", text));
+                        Toast.makeText(SettingsActivity.this, "Логи скопированы",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNeutralButton("Очистить", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        Logs.clear();
+                        Toast.makeText(SettingsActivity.this, "Логи очищены",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Закрыть", null)
+                .show();
     }
 
     private void showFontDialog() {

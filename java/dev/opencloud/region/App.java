@@ -21,6 +21,9 @@ final class App {
         synchronized (App.class) {
             if (cached == null) {
                 cached = discover();
+                if (cached != null) {
+                    Logs.install(cached);
+                }
             }
             return cached;
         }

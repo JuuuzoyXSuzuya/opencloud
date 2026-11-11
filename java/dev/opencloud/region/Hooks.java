@@ -124,7 +124,8 @@ public final class Hooks {
     public static Typeface typeface(String family, int style) {
         try {
             return Fonts.create(family, style);
-        } catch (Throwable ignored) {
+        } catch (Throwable error) {
+            Logs.write("font/name", error);
             return Typeface.create(family, style);
         }
     }
@@ -132,7 +133,8 @@ public final class Hooks {
     public static Typeface typeface(Typeface base, int style) {
         try {
             return Fonts.create(base, style);
-        } catch (Throwable ignored) {
+        } catch (Throwable error) {
+            Logs.write("font/base", error);
             return Typeface.create(base, style);
         }
     }
@@ -140,7 +142,8 @@ public final class Hooks {
     public static Typeface defaultTypeface(int style) {
         try {
             return Fonts.defaultStyle(style);
-        } catch (Throwable ignored) {
+        } catch (Throwable error) {
+            Logs.write("font/default", error);
             return Typeface.defaultFromStyle(style);
         }
     }
@@ -148,7 +151,8 @@ public final class Hooks {
     public static Typeface typefaceFromAsset(AssetManager assets, String path) {
         try {
             return Fonts.fromAsset(assets, path);
-        } catch (Throwable ignored) {
+        } catch (Throwable error) {
+            Logs.write("font/asset", error);
             return Typeface.createFromAsset(assets, path);
         }
     }
@@ -156,7 +160,8 @@ public final class Hooks {
     public static Typeface typefaceFromFile(String path) {
         try {
             return Fonts.fromFile(path);
-        } catch (Throwable ignored) {
+        } catch (Throwable error) {
+            Logs.write("font/file", error);
             return Typeface.createFromFile(path);
         }
     }
