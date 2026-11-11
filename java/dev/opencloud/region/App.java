@@ -23,6 +23,9 @@ final class App {
                 cached = discover();
                 if (cached != null) {
                     Logs.install(cached);
+                    if (Plugins.isEnabled(cached, Plugins.LOG_HELLO)) {
+                        Logs.write("plugin/log_hello", "hello world");
+                    }
                 }
             }
             return cached;
