@@ -14,6 +14,7 @@
 | Тёмная тема | `{"type":"dark_theme","enabled":true}` | принудительно включает тёмную тему (`false` — системную) и сразу применяет её |
 | Регион | `{"type":"region","country":"us","operator":"310260"}` | выбирает страну и оператора из `data/countries.tsv` |
 | Встроенный плагин | `{"type":"plugin","id":"dark_theme","enabled":false}` | переключает любой runtime-плагин по id |
+| Запись в лог | `{"type":"log","tag":"plugin/hello","message":"hello world"}` | пишет строку в логи мода (раздел «Логи») |
 
 `country` — ISO-код из таблицы, `operator` — MCC+MNC. Если оператор не указан,
 берётся первый оператор страны.
@@ -93,6 +94,7 @@
 
 ## Готовые примеры
 
+- `examples/hello-world.oc` — пишет `hello world` в логи, проверка логов.
 - `examples/dark-us-tmobile.oc`
 - `examples/dark-de-telekom.oc`
 

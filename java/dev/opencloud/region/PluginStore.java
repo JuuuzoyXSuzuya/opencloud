@@ -148,6 +148,12 @@ final class PluginStore {
                     Plugins.setEnabled(context, id, action.optBoolean("enabled", true));
                     applied++;
                 }
+            } else if ("log".equals(type)) {
+                String message = action.optString("message", "");
+                if (message.length() > 0) {
+                    Logs.write(action.optString("tag", "plugin"), message);
+                    applied++;
+                }
             } else if ("region".equals(type)) {
                 String country = action.optString("country", "");
                 String operator = action.optString("operator", "");

@@ -1,0 +1,10 @@
+{
+  "id": "hello-world",
+  "name": "Hello World",
+  "version": 1,
+  "author": "OpenCloud",
+  "description": "Пишет «hello world» в логи мода. Удобно, чтобы проверить, что логи работают.",
+  "actions": [
+    { "type": "log", "tag": "plugin/hello", "message": "hello world" }
+  ]
+}
