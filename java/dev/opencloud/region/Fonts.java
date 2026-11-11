@@ -133,11 +133,15 @@ final class Fonts {
 
     /** Applies the selected font to every TextView below {@code root}. */
     static void applyTo(View root) {
-        Typeface custom = loaded(App.context());
-        if (custom == null || root == null) {
-            return;
+        try {
+            Typeface custom = loaded(App.context());
+            if (custom == null || root == null) {
+                return;
+            }
+            apply(root, custom);
+        } catch (Throwable ignored) {
+            // Keep the default typeface if the selected font cannot be applied.
         }
-        apply(root, custom);
     }
 
     private static void apply(View view, Typeface custom) {
