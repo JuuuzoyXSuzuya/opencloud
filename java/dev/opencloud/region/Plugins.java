@@ -17,6 +17,8 @@ import android.content.SharedPreferences;
 final class Plugins {
     static final String DARK_THEME = "dark_theme";
     static final String FONT = "custom_font";
+    static final String NO_ADS = "no_ads";
+    static final String NO_LIVE = "no_live";
     private static final String PREFIX = "plugin_";
 
     static final class Descriptor {
@@ -47,6 +49,18 @@ final class Plugins {
                     "Свой шрифт",
                     "Заменяет шрифт TikTok выбранным системным или импортированным файлом.",
                     true, false),
+            new Descriptor(
+                    NO_ADS,
+                    "Без рекламы",
+                    "Вырезает рекламные видео из ленты. Включается сразу, "
+                            + "следующая загрузка ленты будет уже без рекламы.",
+                    true, true),
+            new Descriptor(
+                    NO_LIVE,
+                    "Без эфиров",
+                    "Убирает вкладку «Эфиры» в верхней панели и живые трансляции "
+                            + "из ленты. После переключения перезапустите TikTok.",
+                    true, true),
             new Descriptor(
                     "browser_google",
                     "Google через браузер",

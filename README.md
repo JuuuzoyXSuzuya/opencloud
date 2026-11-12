@@ -86,8 +86,10 @@ Runtime plugins available now:
 
 | Plugin | What it does |
 |---|---|
-| Dark theme | Rewrites `LX/005C.LJJIII(int)`, TikTok's central appearance entry point, so every requested mode becomes dark (2). Turning it off restores the mode stored in TikTok's own `sp_dark_mode` preference. |
+| Dark theme | Rewrites `LJJIII(int)` on TikTok's central appearance controller (`LX/005C` or `LX/004m`, depending on the release) so every requested mode becomes dark (2). Turning it off restores the mode stored in TikTok's own `sp_dark_mode` preference. |
 | Font | Rewrites `Typeface.create*` and `defaultFromStyle` call sites to the font bridge, which returns the selected system or imported font. Turning it off restores the original typefaces. |
+| No ads | Prepends a filter to `FeedItemList.getItems()` that drops advertising items (`Aweme.isAd()` or aweme type 101) from the feed. |
+| No live | Prepends a guard to `LiveTabProtocol.enable()` that hides the "LIVE" top tab, and drops live-stream items (aweme type 100) from the feed. Restart TikTok after switching it. |
 
 To add a runtime plugin:
 

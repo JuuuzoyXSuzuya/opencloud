@@ -178,6 +178,95 @@ class PatcherTests(unittest.TestCase):
             self.assertEqual(1, text.count("SettingsEntry;->decorate"))
             self.assertEqual(2, text.count("return-object v5"))
 
+    def test_prefix_lands_after_an_annotation_block(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "smali").mkdir()
+            (root / "smali" / "A.smali").write_text(sample(), encoding="utf-8")
+            original = (".method public getItems()Ljava/util/List;\n"
+                        "    .locals 3\n"
+                        "    .annotation system Ldalvik/annotation/Signature;\n"
+                        "        value = {\n"
+                        "            \"()Ljava/util/List;\"\n"
+                        "        }\n"
+                        "    .end annotation\n\n"
+                        "    .prologue\n"
+                        "    iget-object v0, p0, Lcom/ss/android/ugc/aweme/feed/model/"
+                        "FeedItemList;->items:Ljava/util/List;\n"
+                        "    return-object v0\n"
+                        ".end method\n")
+            target = root / "smali" / patcher.FEED_PATH
+            target.parent.mkdir(parents=True)
+            target.write_text(original, encoding="utf-8")
+            patcher.rewrite(root)
+            text = target.read_text(encoding="utf-8")
+            self.assertIn("Filters;->filterFeed", text)
+            self.assertLess(text.index(".end annotation"),
+                            text.index("Filters;->filterFeed"))
+            self.assertLess(text.index("Filters;->filterFeed"),
+                            text.index("iget-object v0"))
+
+    def test_feed_hook_is_prepended_to_get_items(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "smali").mkdir()
+            (root / "smali" / "A.smali").write_text(sample(), encoding="utf-8")
+            original = (".method public getItems()Ljava/util/List;\n"
+                        "    .locals 4\n\n"
+                        "    iget-object v0, v3, Lcom/ss/android/ugc/aweme/feed/model/"
+                        "FeedItemList;->items:Ljava/util/List;\n"
+                        "    return-object v0\n"
+                        ".end method\n")
+            target = root / "smali" / patcher.FEED_PATH
+            target.parent.mkdir(parents=True)
+            target.write_text(original, encoding="utf-8")
+            result = patcher.rewrite(root)
+            self.assertEqual(1, result.counts.get("no ads"))
+            text = target.read_text(encoding="utf-8")
+            self.assertIn("Ldev/opencloud/region/Filters;->filterFeed", text)
+            self.assertLess(text.index("Filters;->filterFeed"),
+                            text.index("iget-object v0"))
+
+    def test_feed_hook_skips_a_class_without_the_items_field(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "smali").mkdir()
+            (root / "smali" / "A.smali").write_text(sample(), encoding="utf-8")
+            original = (".method public getItems()Ljava/util/List;\n"
+                        "    .locals 1\n\n"
+                        "    const/4 v0, 0x0\n"
+                        "    return-object v0\n"
+                        ".end method\n")
+            target = root / "smali" / patcher.FEED_PATH
+            target.parent.mkdir(parents=True)
+            target.write_text(original, encoding="utf-8")
+            patcher.rewrite(root)
+            text = target.read_text(encoding="utf-8")
+            self.assertNotIn("Filters;->filterFeed", text)
+
+    def test_live_tab_hook_hides_the_tab_before_the_original_logic(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "smali").mkdir()
+            (root / "smali" / "A.smali").write_text(sample(), encoding="utf-8")
+            original = (".method public final enable()Z\n"
+                        "    .locals 2\n\n"
+                        "    const-string v0, \"live_tab_single\"\n"
+                        "    invoke-static {v1, v0}, Lkotlin/jvm/internal/Intrinsics;"
+                        "LJI:(Ljava/lang/Object;Ljava/lang/Object;)Z\n"
+                        "    move-result v0\n"
+                        "    return v0\n"
+                        ".end method\n")
+            target = root / "smali" / patcher.LIVE_TAB_PATH
+            target.parent.mkdir(parents=True)
+            target.write_text(original, encoding="utf-8")
+            result = patcher.rewrite(root)
+            self.assertEqual(1, result.counts.get("no live"))
+            text = target.read_text(encoding="utf-8")
+            self.assertIn("Filters;->hideLiveTab()Z", text)
+            self.assertIn("const-string v0, \"live_tab_single\"", text)
+            self.assertLess(text.index("hideLiveTab"), text.index("live_tab_single"))
+
     def test_theme_hook_is_prepended_to_the_original_body(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

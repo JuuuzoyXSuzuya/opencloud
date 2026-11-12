@@ -195,11 +195,33 @@ class MethodPrefix:
 # TikTok renames its obfuscated appearance controller on almost every major
 # release, so the same hook is offered for every name seen so far.  The marker
 # check keeps a name clash from patching an unrelated method.
+FEED_PATH = "com/ss/android/ugc/aweme/feed/model/FeedItemList.smali"
+FEED_FILTER = """\
+    invoke-static {p0}, Ldev/opencloud/region/Filters;->filterFeed(Ljava/lang/Object;)V
+"""
+
+LIVE_TAB_PATH = "com/ss/android/ugc/aweme/toptab/LiveTabProtocol.smali"
+LIVE_TAB_HOOK = """\
+    invoke-static {}, Ldev/opencloud/region/Filters;->hideLiveTab()Z
+    move-result v0
+    if-eqz v0, :opencloud_live
+
+    const/4 v0, 0x0
+    return v0
+
+    :opencloud_live
+"""
+
 METHOD_PREFIXES: tuple[MethodPrefix, ...] = (
     MethodPrefix("LX/005C;", "LJJIII", "(I)V", THEME_PREFIX, "theme",
                  "sput p0, LX/", False),
     MethodPrefix("LX/004m;", "LJJIII", "(I)V", THEME_PREFIX, "theme",
                  "sput p0, LX/", False),
+    MethodPrefix("Lcom/ss/android/ugc/aweme/feed/model/FeedItemList;",
+                 "getItems", "()Ljava/util/List;", FEED_FILTER, "no ads",
+                 "->items:Ljava/util/List;", False),
+    MethodPrefix("Lcom/ss/android/ugc/aweme/toptab/LiveTabProtocol;",
+                 "enable", "()Z", LIVE_TAB_HOOK, "no live", "", False),
 )
 
 
@@ -268,8 +290,18 @@ def _method_pattern(override: MethodOverride) -> re.Pattern[str]:
 def _prefix_block(block: str, code: str) -> str:
     lines = block.splitlines(keepends=True)
     insert_at = 1
+    in_annotation = False
     for index in range(1, len(lines)):
         stripped = lines[index].strip()
+        if in_annotation:
+            insert_at = index + 1
+            if stripped.startswith(".end annotation"):
+                in_annotation = False
+            continue
+        if stripped.startswith(".annotation"):
+            in_annotation = True
+            insert_at = index + 1
+            continue
         if not stripped or stripped.startswith("."):
             insert_at = index + 1
             continue
