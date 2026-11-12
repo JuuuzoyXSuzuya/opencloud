@@ -8,6 +8,7 @@ final class Prefs {
     static final String COUNTRY = "country";
     static final String OPERATOR = "operator";
     static final String THEME_MODE = "theme_mode";
+    static final String ACCENT = "accent";
 
     private Prefs() {
     }

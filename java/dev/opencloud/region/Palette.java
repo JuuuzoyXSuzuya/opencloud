@@ -10,6 +10,10 @@ import android.os.Build;
  * (android.R.color.system_*), which are generated from the wallpaper — so the
  * screen picks up the user's Material You colours.  Older devices, or a
  * failed lookup, fall back to the M3 baseline scheme.
+ *
+ * The user can pick an accent colour for the mod's own screens.  That choice
+ * only replaces the four accent roles; the neutral surface roles stay as they
+ * are, so the result still follows the light/dark setting.
  */
 final class Palette {
     final int surface;
@@ -22,6 +26,47 @@ final class Palette {
     final int primaryContainer;
     final int onPrimaryContainer;
     final int outline;
+
+    /** "system" keeps the Material You accent, the other keys override it. */
+    private static final String SYSTEM = "system";
+
+    private static final String[] ACCENT_KEYS = {
+            SYSTEM, "violet", "blue", "green", "teal",
+            "orange", "red", "pink", "yellow", "graphite",
+    };
+
+    private static final String[] ACCENT_LABELS = {
+            "Системный (Material You)", "Фиолетовый", "Синий", "Зелёный", "Бирюзовый",
+            "Оранжевый", "Красный", "Розовый", "Жёлтый", "Графит",
+    };
+
+    /** primary, onPrimary, primaryContainer, onPrimaryContainer (light). */
+    private static final int[][] ACCENT_LIGHT = {
+            {0, 0, 0, 0},
+            {0xFF6750A4, 0xFFFFFFFF, 0xFFEADDFF, 0xFF21005D},
+            {0xFF0B57D0, 0xFFFFFFFF, 0xFFD3E3FD, 0xFF041E49},
+            {0xFF2E6B3A, 0xFFFFFFFF, 0xFFC8F0CE, 0xFF0A2E14},
+            {0xFF00696D, 0xFFFFFFFF, 0xFF9CF1F5, 0xFF002021},
+            {0xFF8B5000, 0xFFFFFFFF, 0xFFFFDCBE, 0xFF2D1600},
+            {0xFFB3261E, 0xFFFFFFFF, 0xFFFFDAD6, 0xFF410002},
+            {0xFF984061, 0xFFFFFFFF, 0xFFFFD9E2, 0xFF3E001D},
+            {0xFF6D5E00, 0xFFFFFFFF, 0xFFF9E287, 0xFF211B00},
+            {0xFF5D5D5D, 0xFFFFFFFF, 0xFFE3E3E3, 0xFF1B1B1B},
+    };
+
+    /** primary, onPrimary, primaryContainer, onPrimaryContainer (dark). */
+    private static final int[][] ACCENT_DARK = {
+            {0, 0, 0, 0},
+            {0xFFD0BCFF, 0xFF381E72, 0xFF4F378B, 0xFFEADDFF},
+            {0xFFA8C7FA, 0xFF062E6F, 0xFF0842A0, 0xFFD3E3FD},
+            {0xFFA6D89A, 0xFF0D3318, 0xFF1E4D2B, 0xFFC8F0CE},
+            {0xFF80D4D8, 0xFF003739, 0xFF004F52, 0xFF9CF1F5},
+            {0xFFFFB86B, 0xFF482300, 0xFF673C00, 0xFFFFDCBE},
+            {0xFFFFB4AB, 0xFF690005, 0xFF93000A, 0xFFFFDAD6},
+            {0xFFFFB0C8, 0xFF560027, 0xFF7B2D4E, 0xFFFFD9E2},
+            {0xFFE8C34B, 0xFF3A3100, 0xFF544A00, 0xFFF9E287},
+            {0xFFC6C6C6, 0xFF303030, 0xFF474747, 0xFFE2E2E2},
+    };
 
     private Palette(int surface, int onSurface, int onSurfaceVariant,
                     int surfaceContainer, int surfaceContainerHigh,
@@ -40,6 +85,65 @@ final class Palette {
     }
 
     static Palette of(Context context, boolean dark) {
+        Palette base = base(context, dark);
+        int index = indexOf(selected(context));
+        if (index <= 0) {
+            return base;
+        }
+        int[] row = (dark ? ACCENT_DARK : ACCENT_LIGHT)[index];
+        return base.withAccent(row[0], row[1], row[2], row[3]);
+    }
+
+    /** Accent keys in display order, "system" first. */
+    static String[] accents() {
+        return ACCENT_KEYS.clone();
+    }
+
+    static String label(String key) {
+        int index = indexOf(key);
+        return ACCENT_LABELS[index < 0 ? 0 : index];
+    }
+
+    /** The stored accent key, or "system" when nothing (or garbage) is stored. */
+    static String selected(Context context) {
+        String key = Prefs.open(context).getString(Prefs.ACCENT, SYSTEM);
+        return indexOf(key) < 0 ? SYSTEM : key;
+    }
+
+    static void select(Context context, String key) {
+        Prefs.open(context).edit()
+                .putString(Prefs.ACCENT, indexOf(key) < 0 ? SYSTEM : key)
+                .apply();
+    }
+
+    /** Colour of the swatch for {@code key}, independent of the stored choice. */
+    static int accentPreview(Context context, String key, boolean dark) {
+        int index = indexOf(key);
+        if (index <= 0) {
+            return base(context, dark).primary;
+        }
+        return (dark ? ACCENT_DARK : ACCENT_LIGHT)[index][0];
+    }
+
+    private Palette withAccent(int primary, int onPrimary, int container, int onContainer) {
+        return new Palette(surface, onSurface, onSurfaceVariant,
+                surfaceContainer, surfaceContainerHigh,
+                primary, onPrimary, container, onContainer, outline);
+    }
+
+    private static int indexOf(String key) {
+        if (key == null) {
+            return 0;
+        }
+        for (int i = 0; i < ACCENT_KEYS.length; i++) {
+            if (ACCENT_KEYS[i].equals(key)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static Palette base(Context context, boolean dark) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 return dynamic(context, dark);

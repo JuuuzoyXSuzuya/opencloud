@@ -24,6 +24,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
@@ -119,21 +120,144 @@ public final class SettingsActivity extends Activity {
         spacing(built, pixels(4));
         column.addView(built);
 
-        TextView regionTitle = section("Регион");
-        column.addView(regionTitle);
+        /* ------------------------------ Внешний вид ------------------------------ */
+        column.addView(category("Внешний вид", "Оформление TikTok, акцент мода и шрифт"));
+        LinearLayout appearance = group();
+        column.addView(appearance);
+
+        appearance.addView(groupLabel("Тема TikTok"));
+
+        TextView themeIntro = new TextView(this);
+        themeIntro.setText("Принудительный режим оформления TikTok. «Системная» — как в Android.");
+        themeIntro.setTextSize(13);
+        themeIntro.setTextColor(colorMuted);
+        spacing(themeIntro, pixels(2));
+        appearance.addView(themeIntro);
+
+        int mode = ThemePlugin.forcedMode(this);
+        if (mode == ThemePlugin.AUTO) {
+            mode = ThemePlugin.isDark(this) ? ThemePlugin.DARK : ThemePlugin.FOLLOW_SYSTEM;
+        }
+        LinearLayout themeRow = new LinearLayout(this);
+        themeRow.setOrientation(LinearLayout.HORIZONTAL);
+        spacing(themeRow, pixels(10));
+        themeRow.addView(themeSegment("Системная", ThemePlugin.FOLLOW_SYSTEM, mode),
+                segmentParams(0));
+        themeRow.addView(themeSegment("Светлая", ThemePlugin.LIGHT, mode),
+                segmentParams(8));
+        themeRow.addView(themeSegment("Тёмная", ThemePlugin.DARK, mode),
+                segmentParams(8));
+        appearance.addView(themeRow);
+
+        appearance.addView(groupLabel("Акцентная тема"));
+
+        TextView accentIntro = new TextView(this);
+        accentIntro.setText("Цвет разделов, переключателей и кнопок этого экрана. "
+                + "На оформление самого TikTok не влияет.");
+        accentIntro.setTextSize(13);
+        accentIntro.setTextColor(colorMuted);
+        spacing(accentIntro, pixels(2));
+        appearance.addView(accentIntro);
+
+        appearance.addView(accentPicker());
+
+        TextView accentValue = new TextView(this);
+        accentValue.setText("Выбрано: " + Palette.label(Palette.selected(this)));
+        accentValue.setTextSize(13);
+        accentValue.setTextColor(colorMuted);
+        spacing(accentValue, pixels(8));
+        appearance.addView(accentValue);
+
+        appearance.addView(groupLabel("Шрифт"));
+
+        TextView fontIntro = new TextView(this);
+        fontIntro.setText("Системный шрифт или свой файл .ttf/.otf. Мод применяет его сразу, "
+                + "TikTok — при включённом переключателе и после перезапуска.");
+        fontIntro.setTextSize(13);
+        fontIntro.setTextColor(colorMuted);
+        spacing(fontIntro, pixels(2));
+        appearance.addView(fontIntro);
+
+        TextView fontValue = new TextView(this);
+        fontValue.setText(Fonts.selectedLabel(this));
+        fontValue.setTextSize(16);
+        fontValue.setTextColor(colorFg);
+        fontValue.setPadding(pixels(2), pixels(10), 0, 0);
+        appearance.addView(fontValue);
+
+        TextView chooseFont = accentButton("Выбрать шрифт");
+        spacing(chooseFont, pixels(10));
+        chooseFont.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                showFontDialog();
+            }
+        });
+        appearance.addView(chooseFont);
+
+        Switch fontSwitch = new Switch(this);
+        fontSwitch.setText("Применять шрифт в TikTok");
+        fontSwitch.setTextSize(16);
+        fontSwitch.setTextColor(colorFg);
+        fontSwitch.setChecked(Plugins.isEnabled(this, Plugins.FONT) && Fonts.isCustom(this));
+        fontSwitch.setEnabled(Fonts.isCustom(this));
+        int[][] states = {{android.R.attr.state_checked}, {}};
+        fontSwitch.setThumbTintList(new ColorStateList(states,
+                new int[]{colorAccent, colorStroke}));
+        fontSwitch.setTrackTintList(new ColorStateList(states,
+                new int[]{withAlpha(colorAccent, 0.55f), colorCard}));
+        fontSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton button, boolean checked) {
+                Plugins.setEnabled(SettingsActivity.this, Plugins.FONT, checked);
+                Toast.makeText(SettingsActivity.this,
+                        checked ? "Шрифт применится после перезапуска TikTok"
+                                : "Шрифт TikTok отключён",
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+        spacing(fontSwitch, pixels(12));
+        appearance.addView(fontSwitch);
+
+        /* --------------------------------- Лента --------------------------------- */
+        column.addView(category("Лента", "Что показывать в рекомендациях"));
+        LinearLayout feedGroup = group();
+        column.addView(feedGroup);
+
+        TextView feedIntro = new TextView(this);
+        feedIntro.setText("Фильтры применяются сразу, без пересборки APK. "
+                + "Следующая загрузка ленты будет уже без лишнего.");
+        feedIntro.setTextSize(13);
+        feedIntro.setTextColor(colorMuted);
+        spacing(feedIntro, pixels(2));
+        feedGroup.addView(feedIntro);
+
+        Plugins.Descriptor[] plugins = Plugins.all();
+        for (int i = 0; i < plugins.length; i++) {
+            if (!plugins[i].runtime
+                    || Plugins.DARK_THEME.equals(plugins[i].id)
+                    || Plugins.FONT.equals(plugins[i].id)) {
+                continue; // handled by the theme, accent and font selectors above
+            }
+            feedGroup.addView(pluginRow(plugins[i]));
+        }
+
+        /* --------------------------------- Регион -------------------------------- */
+        column.addView(category("Регион", "Страна и оператор, которые видит TikTok"));
+        LinearLayout regionGroup = group();
+        column.addView(regionGroup);
 
         Switch toggleSwitch = new Switch(this);
         toggleSwitch.setText("Использовать профиль региона");
         toggleSwitch.setTextSize(16);
         toggleSwitch.setTextColor(colorFg);
         toggleSwitch.setChecked(Config.isOn(this));
-        int[][] states = {{android.R.attr.state_checked}, {}};
         toggleSwitch.setThumbTintList(new ColorStateList(states,
                 new int[]{colorAccent, colorStroke}));
         toggleSwitch.setTrackTintList(new ColorStateList(states,
                 new int[]{withAlpha(colorAccent, 0.55f), colorCard}));
         toggle = toggleSwitch;
-        spacing(toggle, pixels(10));
+        spacing(toggle, pixels(12));
         toggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton button, boolean checked) {
@@ -141,7 +265,7 @@ public final class SettingsActivity extends Activity {
                 updateSummary();
             }
         });
-        column.addView(toggle);
+        regionGroup.addView(toggle);
 
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(1);
@@ -160,7 +284,7 @@ public final class SettingsActivity extends Activity {
             }
         });
         spacing(card, pixels(12));
-        column.addView(card);
+        regionGroup.addView(card);
 
         TextView cardTitle = new TextView(this);
         cardTitle.setText("Выбор региона");
@@ -182,100 +306,10 @@ public final class SettingsActivity extends Activity {
         cardHint.setPadding(0, pixels(8), 0, 0);
         card.addView(cardHint);
 
-        column.addView(section("Тема TikTok"));
-
-        TextView themeIntro = new TextView(this);
-        themeIntro.setText("Принудительный режим оформления TikTok. «Системная» — как в Android.");
-        themeIntro.setTextSize(13);
-        themeIntro.setTextColor(colorMuted);
-        spacing(themeIntro, pixels(2));
-        column.addView(themeIntro);
-
-        int mode = ThemePlugin.forcedMode(this);
-        if (mode == ThemePlugin.AUTO) {
-            mode = ThemePlugin.isDark(this) ? ThemePlugin.DARK : ThemePlugin.FOLLOW_SYSTEM;
-        }
-        LinearLayout themeRow = new LinearLayout(this);
-        themeRow.setOrientation(LinearLayout.HORIZONTAL);
-        spacing(themeRow, pixels(10));
-        themeRow.addView(themeSegment("Системная", ThemePlugin.FOLLOW_SYSTEM, mode),
-                segmentParams(0));
-        themeRow.addView(themeSegment("Светлая", ThemePlugin.LIGHT, mode),
-                segmentParams(8));
-        themeRow.addView(themeSegment("Тёмная", ThemePlugin.DARK, mode),
-                segmentParams(8));
-        column.addView(themeRow);
-
-        column.addView(section("Шрифт"));
-
-        TextView fontIntro = new TextView(this);
-        fontIntro.setText("Системный шрифт или свой файл .ttf/.otf. Мод применяет его сразу, "
-                + "TikTok — при включённом переключателе и после перезапуска.");
-        fontIntro.setTextSize(13);
-        fontIntro.setTextColor(colorMuted);
-        spacing(fontIntro, pixels(2));
-        column.addView(fontIntro);
-
-        TextView fontValue = new TextView(this);
-        fontValue.setText(Fonts.selectedLabel(this));
-        fontValue.setTextSize(16);
-        fontValue.setTextColor(colorFg);
-        fontValue.setPadding(pixels(2), pixels(10), 0, 0);
-        column.addView(fontValue);
-
-        TextView chooseFont = accentButton("Выбрать шрифт");
-        spacing(chooseFont, pixels(10));
-        chooseFont.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View clicked) {
-                showFontDialog();
-            }
-        });
-        column.addView(chooseFont);
-
-        Switch fontSwitch = new Switch(this);
-        fontSwitch.setText("Применять шрифт в TikTok");
-        fontSwitch.setTextSize(16);
-        fontSwitch.setTextColor(colorFg);
-        fontSwitch.setChecked(Plugins.isEnabled(this, Plugins.FONT) && Fonts.isCustom(this));
-        fontSwitch.setEnabled(Fonts.isCustom(this));
-        fontSwitch.setThumbTintList(new ColorStateList(states,
-                new int[]{colorAccent, colorStroke}));
-        fontSwitch.setTrackTintList(new ColorStateList(states,
-                new int[]{withAlpha(colorAccent, 0.55f), colorCard}));
-        fontSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton button, boolean checked) {
-                Plugins.setEnabled(SettingsActivity.this, Plugins.FONT, checked);
-                Toast.makeText(SettingsActivity.this,
-                        checked ? "Шрифт применится после перезапуска TikTok"
-                                : "Шрифт TikTok отключён",
-                        Toast.LENGTH_SHORT).show();
-            }
-        });
-        spacing(fontSwitch, pixels(12));
-        column.addView(fontSwitch);
-
-        column.addView(section("Функции"));
-
-        TextView pluginIntro = new TextView(this);
-        pluginIntro.setText("Дополнительные функции. Переключатели применяются сразу, "
-                + "без пересборки APK.");
-        pluginIntro.setTextSize(13);
-        pluginIntro.setTextColor(colorMuted);
-        spacing(pluginIntro, pixels(2));
-        column.addView(pluginIntro);
-
-        Plugins.Descriptor[] plugins = Plugins.all();
-        for (int i = 0; i < plugins.length; i++) {
-            if (Plugins.DARK_THEME.equals(plugins[i].id)
-                    || Plugins.FONT.equals(plugins[i].id)) {
-                continue; // handled by the theme and font selectors above
-            }
-            column.addView(pluginRow(plugins[i]));
-        }
-
-        column.addView(section("Кастомные плагины"));
+        /* ------------------------------ Плагины .oc ------------------------------ */
+        column.addView(category("Плагины .oc", "Пресеты настроек, которые можно импортировать"));
+        LinearLayout pluginGroup = group();
+        column.addView(pluginGroup);
 
         TextView customIntro = new TextView(this);
         customIntro.setText("Файлы .oc: зашифрованные пресеты. Импорт добавляет их в список, "
@@ -283,10 +317,10 @@ public final class SettingsActivity extends Activity {
         customIntro.setTextSize(13);
         customIntro.setTextColor(colorMuted);
         spacing(customIntro, pixels(2));
-        column.addView(customIntro);
+        pluginGroup.addView(customIntro);
 
         TextView importButton = accentButton("Импортировать .oc");
-        spacing(importButton, pixels(12));
+        spacing(importButton, pixels(14));
         importButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View clicked) {
@@ -297,7 +331,7 @@ public final class SettingsActivity extends Activity {
                 startActivityForResult(intent, REQUEST_PLUGIN);
             }
         });
-        column.addView(importButton);
+        pluginGroup.addView(importButton);
 
         TextView exportButton = outlineButton("Экспортировать настройки в .oc");
         spacing(exportButton, pixels(10));
@@ -311,7 +345,7 @@ public final class SettingsActivity extends Activity {
                 startActivityForResult(intent, REQUEST_EXPORT);
             }
         });
-        column.addView(exportButton);
+        pluginGroup.addView(exportButton);
 
         List<PluginStore.Plugin> custom = PluginStore.installed(this);
         if (custom.isEmpty()) {
@@ -319,53 +353,53 @@ public final class SettingsActivity extends Activity {
             empty.setText("Пока ничего не импортировано.");
             empty.setTextSize(13);
             empty.setTextColor(colorMuted);
-            spacing(empty, pixels(10));
-            column.addView(empty);
+            spacing(empty, pixels(14));
+            pluginGroup.addView(empty);
         } else {
             for (int i = 0; i < custom.size(); i++) {
-                column.addView(customPluginRow(custom.get(i)));
+                pluginGroup.addView(customPluginRow(custom.get(i)));
             }
         }
+
+        /* -------------------------------- Служебное ------------------------------- */
+        column.addView(category("Служебное", "Логи, состояние сборки и сброс настроек"));
+        LinearLayout serviceGroup = group();
+        column.addView(serviceGroup);
 
         TextView note = new TextView(this);
         note.setText("Профиль читается при каждом вызове, поэтому следующая проверка телефонии уже "
                 + "использует новые значения. Если TikTok показывает старое — закройте и откройте его.");
         note.setTextSize(13);
         note.setTextColor(colorMuted);
-        spacing(note, pixels(20));
-        column.addView(note);
-
-        column.addView(section("Логи"));
-
-        TextView logIntro = new TextView(this);
-        logIntro.setText("Ошибки мода и аварийные завершения. Если TikTok вылетает — "
-                + "лог останется здесь после следующего запуска.");
-        logIntro.setTextSize(13);
-        logIntro.setTextColor(colorMuted);
-        spacing(logIntro, pixels(2));
-        column.addView(logIntro);
+        spacing(note, pixels(14));
+        serviceGroup.addView(note);
 
         TextView showLogs = outlineButton("Открыть логи");
-        spacing(showLogs, pixels(12));
+        spacing(showLogs, pixels(14));
         showLogs.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View clicked) {
                 showLogsDialog();
             }
         });
-        column.addView(showLogs);
+        serviceGroup.addView(showLogs);
 
-        column.addView(section("Сброс"));
+        for (int i = 0; i < plugins.length; i++) {
+            if (plugins[i].runtime) {
+                continue;
+            }
+            serviceGroup.addView(pluginRow(plugins[i]));
+        }
 
         TextView reset = outlineButton("Сбросить настройки мода");
-        spacing(reset, pixels(6));
+        spacing(reset, pixels(16));
         reset.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View clicked) {
                 confirmReset();
             }
         });
-        column.addView(reset);
+        serviceGroup.addView(reset);
 
         ScrollView frame = new ScrollView(this);
         frame.setBackgroundColor(colorBg);
@@ -424,16 +458,119 @@ public final class SettingsActivity extends Activity {
         return (color & 0x00FFFFFF) | (Math.round(alpha * 255f) << 24);
     }
 
-    private TextView section(String label) {
+    /** Big category heading with a one-line explanation underneath. */
+    private LinearLayout category(String label, String hint) {
+        LinearLayout head = new LinearLayout(this);
+        head.setOrientation(LinearLayout.VERTICAL);
+        head.setPadding(pixels(4), 0, pixels(4), 0);
+
+        TextView title = new TextView(this);
+        title.setText(label);
+        title.setTextSize(18);
+        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setTextColor(colorFg);
+        head.addView(title);
+
+        TextView sub = new TextView(this);
+        sub.setText(hint);
+        sub.setTextSize(13);
+        sub.setTextColor(colorMuted);
+        sub.setPadding(0, pixels(2), 0, 0);
+        head.addView(sub);
+
+        spacing(head, pixels(24));
+        return head;
+    }
+
+    /** Rounded card that groups the settings of one category. */
+    private LinearLayout group() {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(pixels(16), pixels(4), pixels(16), pixels(16));
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(colorCard);
+        background.setCornerRadius(pixels(24));
+        card.setBackground(background);
+        spacing(card, pixels(10));
+        return card;
+    }
+
+    private TextView groupLabel(String text) {
         TextView view = new TextView(this);
-        view.setText(label);
-        view.setTextSize(12);
+        view.setText(text);
+        view.setTextSize(14);
         view.setTypeface(Typeface.DEFAULT_BOLD);
-        view.setTextColor(colorAccent);
-        view.setAllCaps(true);
-        view.setLetterSpacing(0.12f);
-        spacing(view, pixels(26));
+        view.setTextColor(colorFg);
+        view.setLetterSpacing(0.01f);
+        spacing(view, pixels(16));
         return view;
+    }
+
+    /** Five swatches per row, so no horizontal scrolling is needed on phones. */
+    private LinearLayout accentPicker() {
+        LinearLayout block = new LinearLayout(this);
+        block.setOrientation(LinearLayout.VERTICAL);
+        spacing(block, pixels(12));
+
+        String current = Palette.selected(this);
+        String[] keys = Palette.accents();
+        LinearLayout row = null;
+        for (int i = 0; i < keys.length; i++) {
+            if (i % 5 == 0) {
+                row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                if (i > 0) {
+                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                            LinearLayout.LayoutParams.WRAP_CONTENT);
+                    params.topMargin = pixels(10);
+                    row.setLayoutParams(params);
+                }
+                block.addView(row);
+            }
+            row.addView(accentSwatch(keys[i], keys[i].equals(current)));
+        }
+        return block;
+    }
+
+    private View accentSwatch(final String key, boolean selected) {
+        int size = pixels(46);
+        FrameLayout holder = new FrameLayout(this);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
+        params.rightMargin = pixels(10);
+        holder.setLayoutParams(params);
+        holder.setClickable(true);
+        holder.setFocusable(true);
+
+        GradientDrawable ring = new GradientDrawable();
+        ring.setShape(GradientDrawable.OVAL);
+        ring.setColor(0x00000000);
+        ring.setStroke(pixels(selected ? 3 : 1),
+                selected ? colorFg : withAlpha(colorStroke, 0.45f));
+        View ringView = new View(this);
+        ringView.setBackground(ring);
+        holder.addView(ringView, new FrameLayout.LayoutParams(size, size));
+
+        GradientDrawable fill = new GradientDrawable();
+        fill.setShape(GradientDrawable.OVAL);
+        fill.setColor(Palette.accentPreview(this, key, dark));
+        View dot = new View(this);
+        int inset = pixels(7);
+        FrameLayout.LayoutParams dotParams =
+                new FrameLayout.LayoutParams(size - inset * 2, size - inset * 2);
+        dotParams.leftMargin = inset;
+        dotParams.topMargin = inset;
+        dot.setBackground(fill);
+        holder.addView(dot, dotParams);
+
+        holder.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                Palette.select(SettingsActivity.this, key);
+                recreate();
+            }
+        });
+        return holder;
     }
 
     private View pluginRow(final Plugins.Descriptor plugin) {
@@ -782,7 +919,7 @@ public final class SettingsActivity extends Activity {
                 dark ? android.R.style.Theme_DeviceDefault_Dialog_Alert
                         : android.R.style.Theme_DeviceDefault_Light_Dialog_Alert);
         builder.setTitle("Сбросить настройки?");
-        builder.setMessage("Будут удалены выбранный регион, тема и все импортированные .oc плагины.");
+        builder.setMessage("Будут удалены выбранный регион, тема, акцент и все импортированные .oc плагины.");
         builder.setPositiveButton("Сбросить", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {

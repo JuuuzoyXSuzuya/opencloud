@@ -70,7 +70,19 @@ every bridge method calls the real framework method again.
 
 ## Plugins
 
-The OpenCloud screen has a **"Функции"** section. A plugin is either:
+The OpenCloud screen is split into categories — **«Внешний вид»**, **«Лента»**,
+**«Регион»**, **«Плагины .oc»** and **«Служебное»** — each drawn as its own
+rounded card. **«Внешний вид»** holds the TikTok theme segments, the accent
+theme of the mod and the font. **«Лента»** holds the content filters, and
+**«Служебное»** keeps the logs, the build-time modules and the reset button.
+
+The accent theme is a row of ten swatches: *Системный (Material You)*, violet,
+blue, green, teal, orange, red, pink, yellow and graphite. The choice is stored
+in OpenCloud's preferences and recolours the mod's own screens (headings,
+switches, buttons, cards and the settings row inside TikTok); it does not
+touch TikTok's appearance, which stays under «Тема TikTok».
+
+A plugin is either:
 
 - **runtime** — a switch stored in OpenCloud's preferences. The patched code
   reads it on every call, so it applies immediately without a rebuild;
@@ -78,9 +90,10 @@ The OpenCloud screen has a **"Функции"** section. A plugin is either:
   list for reference (currently the browser Google login and the TikTok
   settings row).
 
-Above it, **"Тема TikTok"** offers three Material 3 segments — системная,
-светлая, тёмная — and forces the selected appearance through the same hook.
-The OpenCloud UI itself follows that choice.
+**"Тема TikTok"** offers three Material 3 segments — системная, светлая,
+тёмная — and forces the selected appearance through the same hook. The
+OpenCloud UI itself follows that choice unless an accent theme overrides the
+accent roles.
 
 Runtime plugins available now:
 
@@ -105,8 +118,8 @@ override is missing.
 
 ### Custom `.oc` plugins
 
-Besides the built-in switches, the screen has a **"Кастомные плагины"**
-section that imports encrypted `.oc` presets:
+Besides the built-in switches, the **«Плагины .oc»** category imports
+encrypted `.oc` presets:
 
 - a `.oc` file is `"OCP1"` + a random 12-byte nonce + AES-256-GCM ciphertext
   and tag, so it cannot be read or edited with a text editor;
