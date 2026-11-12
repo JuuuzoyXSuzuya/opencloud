@@ -5,10 +5,6 @@
       <stop offset="0.52" stop-color="#A8C7FA"/>
       <stop offset="1" stop-color="#FFD9E2"/>
     </linearGradient>
-    <linearGradient id="cloudFill" x1="320" y1="288" x2="720" y2="704" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#F3EDF7"/>
-    </linearGradient>
     <clipPath id="squircle">
       <rect width="1024" height="1024" rx="232" ry="232"/>
     </clipPath>
@@ -20,10 +16,7 @@
     <circle cx="168" cy="884" r="300" fill="#FFD9E2" opacity="0.35"/>
   </g>
 
-  <!-- cloud -->
-  <path d="M360 704 C282 704 220 644 220 568 C220 494 274 434 346 424 C372 344 444 288 528 288 C612 288 682 342 706 420 C778 428 832 486 832 560 C832 642 768 704 688 704 Z" fill="url(#cloudFill)"/>
-
   <!-- open ring -->
-  <circle cx="570" cy="518" r="104" fill="none" stroke="#4F378B" stroke-width="36"
-          stroke-linecap="round" stroke-dasharray="520 134" transform="rotate(-58 570 518)"/>
+  <circle cx="512" cy="512" r="192" fill="none" stroke="#4F378B" stroke-width="56"
+          stroke-linecap="round" stroke-dasharray="980 226" transform="rotate(-35 512 512)"/>
 </svg>

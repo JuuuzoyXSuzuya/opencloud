@@ -272,8 +272,8 @@ it is intentionally not part of the unit test run.
 ## Branding
 
 `assets/branding/` contains the source logo files, redrawn in the Material You
-style: a lavender → blue → pink tonal tile, a flat cloud glyph and an open ring
-in deep purple (accent `#4F378B`).
+style: a lavender → blue → pink tonal tile with a single open ring in deep
+purple (accent `#4F378B`).
 
 - `opencloud-icon.svg` / `opencloud-icon-1024.png` / `-512.png` / `-256.png`
 - `opencloud-logo.svg` / `opencloud-logo.png` (icon + wordmark)
