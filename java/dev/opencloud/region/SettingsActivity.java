@@ -50,8 +50,17 @@ public final class SettingsActivity extends Activity {
     private static final int REQUEST_EXPORT = 42;
     private static final int REQUEST_FONT = 43;
 
+    private static final String KEY_PAGE = "opencloud_page";
+    private static final String PAGE_APPEARANCE = "appearance";
+    private static final String PAGE_FEED = "feed";
+    private static final String PAGE_REGION = "region";
+    private static final String PAGE_PLUGINS = "plugins";
+    private static final String PAGE_SERVICE = "service";
+
     private CompoundButton toggle;
     private TextView summary;
+    /** null on the category list, otherwise the open category. */
+    private String page;
 
     private boolean dark;
     private int colorBg;
@@ -72,6 +81,7 @@ public final class SettingsActivity extends Activity {
         super.onCreate(saved);
         setTitle("Мод OpenCloud");
         applyPalette();
+        page = saved == null ? null : saved.getString(KEY_PAGE);
 
         int edge = pixels(20);
         LinearLayout column = new LinearLayout(this);
@@ -79,6 +89,71 @@ public final class SettingsActivity extends Activity {
         column.setPadding(edge, edge, edge, edge);
         column.setBackgroundColor(colorBg);
 
+        if (PAGE_APPEARANCE.equals(page)) {
+            addBack(column);
+            column.addView(category("Внешний вид", "Оформление TikTok, акцент мода и шрифт"));
+            buildAppearance(column);
+        } else if (PAGE_FEED.equals(page)) {
+            addBack(column);
+            column.addView(category("Лента", "Что показывать в рекомендациях"));
+            buildFeed(column);
+        } else if (PAGE_REGION.equals(page)) {
+            addBack(column);
+            column.addView(category("Регион", "Страна и оператор, которые видит TikTok"));
+            buildRegion(column);
+        } else if (PAGE_PLUGINS.equals(page)) {
+            addBack(column);
+            column.addView(category("Плагины .oc", "Пресеты настроек, которые можно импортировать"));
+            buildPlugins(column);
+        } else if (PAGE_SERVICE.equals(page)) {
+            addBack(column);
+            column.addView(category("Служебное", "Логи, состояние сборки и сброс настроек"));
+            buildService(column);
+        } else {
+            page = null;
+            addHeader(column);
+            addCategoryRows(column);
+        }
+
+        ScrollView frame = new ScrollView(this);
+        frame.setBackgroundColor(colorBg);
+        frame.addView(column);
+        setContentView(frame);
+        applyInsets(frame, column, edge);
+        applySystemBars();
+        Fonts.applyTo(frame);
+        updateSummary();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle out) {
+        super.onSaveInstanceState(out);
+        if (page != null) {
+            out.putString(KEY_PAGE, page);
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (page != null) {
+            closePage();
+            return;
+        }
+        super.onBackPressed();
+    }
+
+    private void openPage(String id) {
+        page = id;
+        recreate();
+    }
+
+    private void closePage() {
+        page = null;
+        recreate();
+    }
+
+    /** Heading, mod badge and the one-paragraph introduction. */
+    private void addHeader(LinearLayout column) {
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
@@ -106,7 +181,8 @@ public final class SettingsActivity extends Activity {
 
         TextView intro = new TextView(this);
         intro.setText("Это мод, встроенный в TikTok. Регион, тема, шрифт и плагины "
-                + "меняются внутри самого TikTok — отдельного приложения нет.");
+                + "меняются внутри самого TikTok — отдельного приложения нет. "
+                + "Выберите раздел ниже.");
         intro.setTextSize(14);
         intro.setTextColor(colorMuted);
         spacing(intro, pixels(6));
@@ -119,9 +195,131 @@ public final class SettingsActivity extends Activity {
         built.setLetterSpacing(0.04f);
         spacing(built, pixels(4));
         column.addView(built);
+    }
 
-        /* ------------------------------ Внешний вид ------------------------------ */
-        column.addView(category("Внешний вид", "Оформление TikTok, акцент мода и шрифт"));
+    private void addCategoryRows(LinearLayout column) {
+        column.addView(categoryRow("Внешний вид", appearanceSummary(), PAGE_APPEARANCE),
+                rowParams(pixels(18)));
+        column.addView(categoryRow("Лента", feedSummary(), PAGE_FEED),
+                rowParams(pixels(10)));
+        column.addView(categoryRow("Регион", regionSummary(), PAGE_REGION),
+                rowParams(pixels(10)));
+        column.addView(categoryRow("Плагины .oc", pluginsSummary(), PAGE_PLUGINS),
+                rowParams(pixels(10)));
+        column.addView(categoryRow("Служебное", "Логи, модули сборки и сброс", PAGE_SERVICE),
+                rowParams(pixels(10)));
+    }
+
+    private LinearLayout.LayoutParams rowParams(int top) {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.topMargin = top;
+        return params;
+    }
+
+    private View categoryRow(String title, String hint, final String target) {
+        LinearLayout card = new LinearLayout(this);
+        card.setOrientation(LinearLayout.HORIZONTAL);
+        card.setGravity(Gravity.CENTER_VERTICAL);
+        card.setPadding(pixels(18), pixels(16), pixels(14), pixels(16));
+        GradientDrawable background = new GradientDrawable();
+        background.setColor(colorCard);
+        background.setCornerRadius(pixels(20));
+        card.setBackground(new RippleDrawable(
+                ColorStateList.valueOf(withAlpha(colorOnCardButton, 0.12f)), background, null));
+        card.setClickable(true);
+        card.setFocusable(true);
+        card.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                openPage(target);
+            }
+        });
+
+        LinearLayout text = new LinearLayout(this);
+        text.setOrientation(LinearLayout.VERTICAL);
+        TextView name = new TextView(this);
+        name.setText(title);
+        name.setTextSize(17);
+        name.setTypeface(Typeface.DEFAULT_BOLD);
+        name.setTextColor(colorFg);
+        text.addView(name);
+        TextView sub = new TextView(this);
+        sub.setText(hint);
+        sub.setTextSize(13);
+        sub.setTextColor(colorMuted);
+        sub.setPadding(0, pixels(3), 0, 0);
+        text.addView(sub);
+        card.addView(text, new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
+
+        TextView chevron = new TextView(this);
+        chevron.setText("›");
+        chevron.setTextSize(26);
+        chevron.setTextColor(colorMuted);
+        chevron.setPadding(pixels(12), 0, pixels(2), 0);
+        card.addView(chevron);
+        return card;
+    }
+
+    private void addBack(LinearLayout column) {
+        TextView back = new TextView(this);
+        back.setText("‹  Назад");
+        back.setTextSize(15);
+        back.setTypeface(Typeface.DEFAULT_BOLD);
+        back.setTextColor(colorAccent);
+        back.setPadding(pixels(2), pixels(12), pixels(2), pixels(6));
+        back.setClickable(true);
+        back.setFocusable(true);
+        back.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                closePage();
+            }
+        });
+        column.addView(back);
+    }
+
+    private String appearanceSummary() {
+        int mode = ThemePlugin.forcedMode(this);
+        String theme = mode == ThemePlugin.LIGHT ? "Светлая"
+                : mode == ThemePlugin.DARK ? "Тёмная" : "Системная";
+        return theme + " · " + Palette.label(Palette.selected(this)) + " · "
+                + Fonts.selectedLabel(this);
+    }
+
+    private String feedSummary() {
+        boolean ads = Plugins.isEnabled(this, Plugins.NO_ADS);
+        boolean live = Plugins.isEnabled(this, Plugins.NO_LIVE);
+        if (ads && live) {
+            return "Без рекламы и эфиров";
+        }
+        if (ads) {
+            return "Без рекламы";
+        }
+        if (live) {
+            return "Без эфиров";
+        }
+        return "Фильтры выключены";
+    }
+
+    private String regionSummary() {
+        Profile profile = currentProfile();
+        if (profile == null) {
+            return "Не выбран";
+        }
+        return profile.country() + " — " + profile.operator() + " (" + profile.numeric() + ")"
+                + (Config.isOn(this) ? "" : " · выкл.");
+    }
+
+    private String pluginsSummary() {
+        int count = PluginStore.installed(this).size();
+        return count == 0 ? "Пресетов нет" : "Импортировано: " + count;
+    }
+
+    /* ------------------------------ Внешний вид ------------------------------ */
+    private void buildAppearance(LinearLayout column) {
         LinearLayout appearance = group();
         column.addView(appearance);
 
@@ -195,13 +393,13 @@ public final class SettingsActivity extends Activity {
         });
         appearance.addView(chooseFont);
 
+        int[][] states = {{android.R.attr.state_checked}, {}};
         Switch fontSwitch = new Switch(this);
         fontSwitch.setText("Применять шрифт в TikTok");
         fontSwitch.setTextSize(16);
         fontSwitch.setTextColor(colorFg);
         fontSwitch.setChecked(Plugins.isEnabled(this, Plugins.FONT) && Fonts.isCustom(this));
         fontSwitch.setEnabled(Fonts.isCustom(this));
-        int[][] states = {{android.R.attr.state_checked}, {}};
         fontSwitch.setThumbTintList(new ColorStateList(states,
                 new int[]{colorAccent, colorStroke}));
         fontSwitch.setTrackTintList(new ColorStateList(states,
@@ -218,9 +416,10 @@ public final class SettingsActivity extends Activity {
         });
         spacing(fontSwitch, pixels(12));
         appearance.addView(fontSwitch);
+    }
 
-        /* --------------------------------- Лента --------------------------------- */
-        column.addView(category("Лента", "Что показывать в рекомендациях"));
+    /* --------------------------------- Лента --------------------------------- */
+    private void buildFeed(LinearLayout column) {
         LinearLayout feedGroup = group();
         column.addView(feedGroup);
 
@@ -237,16 +436,18 @@ public final class SettingsActivity extends Activity {
             if (!plugins[i].runtime
                     || Plugins.DARK_THEME.equals(plugins[i].id)
                     || Plugins.FONT.equals(plugins[i].id)) {
-                continue; // handled by the theme, accent and font selectors above
+                continue; // handled by the theme, accent and font selectors
             }
             feedGroup.addView(pluginRow(plugins[i]));
         }
+    }
 
-        /* --------------------------------- Регион -------------------------------- */
-        column.addView(category("Регион", "Страна и оператор, которые видит TikTok"));
+    /* --------------------------------- Регион -------------------------------- */
+    private void buildRegion(LinearLayout column) {
         LinearLayout regionGroup = group();
         column.addView(regionGroup);
 
+        int[][] states = {{android.R.attr.state_checked}, {}};
         Switch toggleSwitch = new Switch(this);
         toggleSwitch.setText("Использовать профиль региона");
         toggleSwitch.setTextSize(16);
@@ -305,9 +506,10 @@ public final class SettingsActivity extends Activity {
         cardHint.setTextColor(withAlpha(colorOnCardButton, 0.75f));
         cardHint.setPadding(0, pixels(8), 0, 0);
         card.addView(cardHint);
+    }
 
-        /* ------------------------------ Плагины .oc ------------------------------ */
-        column.addView(category("Плагины .oc", "Пресеты настроек, которые можно импортировать"));
+    /* ------------------------------ Плагины .oc ------------------------------ */
+    private void buildPlugins(LinearLayout column) {
         LinearLayout pluginGroup = group();
         column.addView(pluginGroup);
 
@@ -360,9 +562,10 @@ public final class SettingsActivity extends Activity {
                 pluginGroup.addView(customPluginRow(custom.get(i)));
             }
         }
+    }
 
-        /* -------------------------------- Служебное ------------------------------- */
-        column.addView(category("Служебное", "Логи, состояние сборки и сброс настроек"));
+    /* -------------------------------- Служебное ------------------------------- */
+    private void buildService(LinearLayout column) {
         LinearLayout serviceGroup = group();
         column.addView(serviceGroup);
 
@@ -384,6 +587,7 @@ public final class SettingsActivity extends Activity {
         });
         serviceGroup.addView(showLogs);
 
+        Plugins.Descriptor[] plugins = Plugins.all();
         for (int i = 0; i < plugins.length; i++) {
             if (plugins[i].runtime) {
                 continue;
@@ -400,15 +604,6 @@ public final class SettingsActivity extends Activity {
             }
         });
         serviceGroup.addView(reset);
-
-        ScrollView frame = new ScrollView(this);
-        frame.setBackgroundColor(colorBg);
-        frame.addView(column);
-        setContentView(frame);
-        applyInsets(frame, column, edge);
-        applySystemBars();
-        Fonts.applyTo(frame);
-        updateSummary();
     }
 
     private void applySystemBars() {

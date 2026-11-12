@@ -70,10 +70,12 @@ every bridge method calls the real framework method again.
 
 ## Plugins
 
-The OpenCloud screen is split into categories — **«Внешний вид»**, **«Лента»**,
-**«Регион»**, **«Плагины .oc»** and **«Служебное»** — each drawn as its own
-rounded card. **«Внешний вид»** holds the TikTok theme segments, the accent
-theme of the mod and the font. **«Лента»** holds the content filters, and
+The OpenCloud screen starts with a list of categories — **«Внешний вид»**,
+**«Лента»**, **«Регион»**, **«Плагины .oc»** and **«Служебное»** — each row
+showing a live summary. Tapping a row opens a separate page with only that
+category's settings and a **«Назад»** link (the system back gesture does the
+same). **«Внешний вид»** holds the TikTok theme segments, the accent theme of
+the mod and the font. **«Лента»** holds the content filters, and
 **«Служебное»** keeps the logs, the build-time modules and the reset button.
 
 The accent theme is a row of ten swatches: *Системный (Material You)*, violet,
