@@ -123,6 +123,7 @@ public final class SettingsActivity extends Activity {
         applySystemBars();
         Fonts.applyTo(frame);
         updateSummary();
+        Logs.write("ui", "page: " + (page == null ? "list" : page));
     }
 
     @Override
@@ -1165,6 +1166,10 @@ public final class SettingsActivity extends Activity {
     }
 
     private void updateSummary() {
+        if (summary == null) {
+            // The region card only exists on the region page.
+            return;
+        }
         Profile profile = Atlas.find(Config.selectedIso(this), Config.selectedOperator(this));
         if (profile == null) {
             profile = Atlas.defaultProfile();
