@@ -1364,11 +1364,28 @@ public final class SettingsActivity extends Activity {
         scroll.setPadding(pixels(16), pixels(8), pixels(16), pixels(8));
         scroll.addView(body);
 
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(1);
+        TextView save = outlineButton("Сохранить в Загрузки");
+        spacing(save, pixels(4));
+        save.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                String path = Logs.export();
+                Toast.makeText(SettingsActivity.this,
+                        path == null ? "Не удалось сохранить лог"
+                                : "Сохранено: " + path,
+                        Toast.LENGTH_LONG).show();
+            }
+        });
+        content.addView(save);
+        content.addView(scroll);
+
         new AlertDialog.Builder(this,
                 dark ? android.R.style.Theme_DeviceDefault_Dialog_Alert
                         : android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
                 .setTitle("Логи")
-                .setView(scroll)
+                .setView(content)
                 .setPositiveButton("Копировать", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {

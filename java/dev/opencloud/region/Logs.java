@@ -1,9 +1,16 @@
 package dev.opencloud.region;
 
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.SimpleDateFormat;
@@ -25,6 +32,7 @@ final class Logs {
 
     private static volatile File file;
     private static volatile boolean handlerInstalled;
+    private static volatile Context appContext;
 
     private Logs() {
     }
@@ -35,6 +43,8 @@ final class Logs {
             return;
         }
         handlerInstalled = true;
+        Context application = context.getApplicationContext();
+        appContext = application != null ? application : context;
         file = new File(context.getFilesDir(), NAME);
         write("app", "mod started");
         try {
@@ -44,6 +54,7 @@ final class Logs {
                 @Override
                 public void uncaughtException(Thread thread, Throwable error) {
                     write("crash/" + thread.getName(), error);
+                    export();
                     if (previous != null) {
                         previous.uncaughtException(thread, error);
                     }
@@ -53,6 +64,102 @@ final class Logs {
             // Without a handler the mod still works.
         }
     }
+
+    /**
+     * Copies the log to {@code Download/OpenCloud/opencloud.log}.
+     *
+     * <p>The private file cannot be pulled over FTP and adb is not always
+     * available, so a crash exports itself where a file manager can reach it.
+     * Returns the public path on success, {@code null} otherwise.</p>
+     */
+    static String export() {
+        Context context = appContext;
+        File target = file;
+        if (context == null || target == null || !target.isFile()) {
+            return null;
+        }
+        try {
+            byte[] data = readAll(target);
+            return Downloads.put(context, NAME, data);
+        } catch (Throwable error) {
+            return null;
+        }
+    }
+
+    /** Kept apart so older ART never has to verify the Android 10 API. */
+    private static final class Downloads {
+        static String put(Context context, String name, byte[] data) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                return putLegacy(name, data);
+            }
+            OutputStream output = null;
+            try {
+                ContentResolver resolver = context.getContentResolver();
+                String folder = Environment.DIRECTORY_DOWNLOADS + "/OpenCloud/";
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+                values.put(MediaStore.MediaColumns.MIME_TYPE, "text/plain");
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, folder);
+                try {
+                    resolver.delete(MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                            MediaStore.MediaColumns.DISPLAY_NAME + "=? AND "
+                                    + MediaStore.MediaColumns.RELATIVE_PATH + "=?",
+                            new String[]{name, folder});
+                } catch (Throwable ignored) {
+                    // Duplicates are harmless.
+                }
+                Uri uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                if (uri == null) {
+                    return null;
+                }
+                output = resolver.openOutputStream(uri, "wt");
+                if (output == null) {
+                    return null;
+                }
+                output.write(data);
+                output.flush();
+                return folder + name;
+            } catch (Throwable error) {
+                return null;
+            } finally {
+                if (output != null) {
+                    try {
+                        output.close();
+                    } catch (Throwable ignored) {
+                        // Nothing useful to do here.
+                    }
+                }
+            }
+        }
+
+        @SuppressWarnings("deprecation")
+        private static String putLegacy(String name, byte[] data) {
+            FileOutputStream output = null;
+            try {
+                File folder = new File(
+                        Environment.getExternalStorageDirectory(), "Download/OpenCloud");
+                if (!folder.isDirectory() && !folder.mkdirs()) {
+                    return null;
+                }
+                File target = new File(folder, name);
+                output = new FileOutputStream(target, false);
+                output.write(data);
+                output.flush();
+                return target.getAbsolutePath();
+            } catch (Throwable error) {
+                return null;
+            } finally {
+                if (output != null) {
+                    try {
+                        output.close();
+                    } catch (Throwable ignored) {
+                        // Nothing useful to do here.
+                    }
+                }
+            }
+        }
+    }
+
 
     static void write(String tag, String message) {
         append(tag + ": " + message);

@@ -76,25 +76,44 @@ public final class Filters {
                 return;
             }
             ArrayList<Object> kept = new ArrayList<Object>(items.size());
-            boolean dropped = false;
             for (int index = 0; index < items.size(); index++) {
                 Object item = items.get(index);
                 if (item == null) {
                     continue;
                 }
                 if ((ads && isAd(item)) || (live && isLive(item))) {
-                    dropped = true;
-                } else {
-                    kept.add(item);
+                    continue;
                 }
+                kept.add(item);
             }
-            if (!dropped) {
+            if (kept.size() == items.size()) {
                 lastInput = items;
                 return;
             }
-            field.set(feedItemList, kept);
-            lastOutput = kept;
-            lastSize = kept.size();
+            int removed = items.size() - kept.size();
+            int total = items.size();
+            /*
+             * Remove in place: the model may hand this very list to other
+             * components, and swapping in a plain ArrayList breaks code that
+             * relies on the original list type.  If the list rejects removal
+             * the toggle simply does nothing until the next refresh.
+             */
+            List raw = items;
+            try {
+                for (int index = raw.size() - 1; index >= 0; index--) {
+                    Object item = raw.get(index);
+                    boolean drop = item == null
+                            || (ads && isAd(item)) || (live && isLive(item));
+                    if (drop) {
+                        raw.remove(index);
+                    }
+                }
+            } catch (Throwable unmodifiable) {
+                field.set(feedItemList, kept);
+            }
+            lastOutput = items;
+            lastSize = items.size();
+            Logs.write("filter", "feed: removed " + removed + " of " + total);
         } catch (Throwable ignored) {
             // Never break a feed request because a filter could not run.
         }
