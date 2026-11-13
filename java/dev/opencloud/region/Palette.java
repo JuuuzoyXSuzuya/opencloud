@@ -1,31 +1,47 @@
 package dev.opencloud.region;
 
 import android.content.Context;
+import android.graphics.Color;
 import android.os.Build;
 
 /**
- * Material 3 colour roles.
+ * Material 3 Expressive colour roles.
  *
- * On Android 12+ the values come from the system tonal palettes
- * (android.R.color.system_*), which are generated from the wallpaper — so the
- * screen picks up the user's Material You colours.  Older devices, or a
- * failed lookup, fall back to the M3 baseline scheme.
+ * <p>On Android 12+ the neutral and accent roles come from the system tonal
+ * palettes (android.R.color.system_*), which are generated from the wallpaper,
+ * so the screen picks up the user's Material You colours.  Older devices, or a
+ * failed lookup, fall back to the M3 baseline scheme.</p>
  *
- * The user can pick an accent colour for the mod's own screens.  That choice
- * only replaces the four accent roles; the neutral surface roles stay as they
- * are, so the result still follows the light/dark setting.
+ * <p>The expressive variants of the scheme (secondary/tertiary containers) are
+ * derived from the accent: a hue-shifted tertiary and a softened secondary
+ * container.  That keeps the scheme coherent for every accent the user can
+ * pick without shipping ten hand-tuned palettes.</p>
  */
 final class Palette {
     final int surface;
-    final int onSurface;
-    final int onSurfaceVariant;
+    final int surfaceContainerLowest;
+    final int surfaceContainerLow;
     final int surfaceContainer;
     final int surfaceContainerHigh;
+    final int surfaceContainerHighest;
+    final int onSurface;
+    final int onSurfaceVariant;
+    final int outline;
+    final int outlineVariant;
     final int primary;
     final int onPrimary;
     final int primaryContainer;
     final int onPrimaryContainer;
-    final int outline;
+    final int secondaryContainer;
+    final int onSecondaryContainer;
+    final int tertiary;
+    final int onTertiary;
+    final int tertiaryContainer;
+    final int onTertiaryContainer;
+    final int error;
+    final int onError;
+    final int errorContainer;
+    final int onErrorContainer;
 
     /** "system" keeps the Material You accent, the other keys override it. */
     private static final String SYSTEM = "system";
@@ -68,20 +84,54 @@ final class Palette {
             {0xFFC6C6C6, 0xFF303030, 0xFF474747, 0xFFE2E2E2},
     };
 
+    private static final int LIGHT_ERROR = 0xFFB3261E;
+    private static final int LIGHT_ON_ERROR = 0xFFFFFFFF;
+    private static final int LIGHT_ERROR_CONTAINER = 0xFFF9DEDC;
+    private static final int LIGHT_ON_ERROR_CONTAINER = 0xFF410002;
+    private static final int DARK_ERROR = 0xFFF2B8B5;
+    private static final int DARK_ON_ERROR = 0xFF601410;
+    private static final int DARK_ERROR_CONTAINER = 0xFF8C1D18;
+    private static final int DARK_ON_ERROR_CONTAINER = 0xFFF9DEDC;
+
     private Palette(int surface, int onSurface, int onSurfaceVariant,
-                    int surfaceContainer, int surfaceContainerHigh,
-                    int primary, int onPrimary, int primaryContainer,
-                    int onPrimaryContainer, int outline) {
+                    int surfaceContainerHigh, int primary, int onPrimary,
+                    int primaryContainer, int onPrimaryContainer, int outline,
+                    int error, int onError, int errorContainer, int onErrorContainer) {
         this.surface = surface;
         this.onSurface = onSurface;
         this.onSurfaceVariant = onSurfaceVariant;
-        this.surfaceContainer = surfaceContainer;
         this.surfaceContainerHigh = surfaceContainerHigh;
         this.primary = primary;
         this.onPrimary = onPrimary;
         this.primaryContainer = primaryContainer;
         this.onPrimaryContainer = onPrimaryContainer;
         this.outline = outline;
+        this.error = error;
+        this.onError = onError;
+        this.errorContainer = errorContainer;
+        this.onErrorContainer = onErrorContainer;
+
+        // Expressive tonal ladder: the containers step away from the surface at
+        // fixed rates, so every palette (baseline, dynamic or accent) gets the
+        // same sense of depth.
+        this.surfaceContainerLowest = mix(surface, surfaceContainerHigh, 0.12f);
+        this.surfaceContainerLow = mix(surface, surfaceContainerHigh, 0.35f);
+        this.surfaceContainer = mix(surface, surfaceContainerHigh, 0.65f);
+        this.surfaceContainerHighest = mix(surfaceContainerHigh, onSurface, 0.05f);
+        this.outlineVariant = mix(outline, surface, 0.55f);
+
+        // Expressive secondary: a softer, lower-contrast companion to primary.
+        int secondary = mix(primaryContainer, surface, 0.55f);
+        this.secondaryContainer = secondary;
+        this.onSecondaryContainer = readableOn(secondary);
+
+        // Expressive tertiary: the accent rotated to the next hue family.
+        int shifted = shiftHue(primary);
+        this.tertiary = shifted;
+        this.onTertiary = readableOn(shifted);
+        int tertiaryContainer = mix(shifted, surface, 0.78f);
+        this.tertiaryContainer = tertiaryContainer;
+        this.onTertiaryContainer = readableOn(tertiaryContainer);
     }
 
     static Palette of(Context context, boolean dark) {
@@ -126,9 +176,9 @@ final class Palette {
     }
 
     private Palette withAccent(int primary, int onPrimary, int container, int onContainer) {
-        return new Palette(surface, onSurface, onSurfaceVariant,
-                surfaceContainer, surfaceContainerHigh,
-                primary, onPrimary, container, onContainer, outline);
+        return new Palette(surface, onSurface, onSurfaceVariant, surfaceContainerHigh,
+                primary, onPrimary, container, onContainer, outline,
+                error, onError, errorContainer, onErrorContainer);
     }
 
     private static int indexOf(String key) {
@@ -160,39 +210,69 @@ final class Palette {
                     context.getColor(android.R.color.system_neutral1_900),
                     context.getColor(android.R.color.system_neutral1_50),
                     context.getColor(android.R.color.system_neutral2_200),
-                    context.getColor(android.R.color.system_neutral1_800),
                     context.getColor(android.R.color.system_neutral1_700),
                     context.getColor(android.R.color.system_accent1_200),
                     context.getColor(android.R.color.system_accent1_900),
                     context.getColor(android.R.color.system_accent1_700),
                     context.getColor(android.R.color.system_accent1_100),
-                    context.getColor(android.R.color.system_neutral2_400));
+                    context.getColor(android.R.color.system_neutral2_400),
+                    DARK_ERROR, DARK_ON_ERROR, DARK_ERROR_CONTAINER, DARK_ON_ERROR_CONTAINER);
         }
         return new Palette(
                 context.getColor(android.R.color.system_neutral1_50),
                 context.getColor(android.R.color.system_neutral1_900),
                 context.getColor(android.R.color.system_neutral2_700),
-                context.getColor(android.R.color.system_neutral1_100),
                 context.getColor(android.R.color.system_neutral1_200),
                 context.getColor(android.R.color.system_accent1_600),
                 context.getColor(android.R.color.system_neutral1_50),
                 context.getColor(android.R.color.system_accent1_100),
                 context.getColor(android.R.color.system_accent1_900),
-                context.getColor(android.R.color.system_neutral2_500));
+                context.getColor(android.R.color.system_neutral2_500),
+                LIGHT_ERROR, LIGHT_ON_ERROR, LIGHT_ERROR_CONTAINER, LIGHT_ON_ERROR_CONTAINER);
     }
 
     private static Palette baseline(boolean dark) {
         if (dark) {
             return new Palette(
                     0xFF141218, 0xFFE6E0E9, 0xFFCAC4D0,
-                    0xFF211F26, 0xFF2B2930,
+                    0xFF2B2930,
                     0xFFD0BCFF, 0xFF381E72, 0xFF4F378B, 0xFFEADDFF,
-                    0xFF938F99);
+                    0xFF938F99,
+                    DARK_ERROR, DARK_ON_ERROR, DARK_ERROR_CONTAINER, DARK_ON_ERROR_CONTAINER);
         }
         return new Palette(
                 0xFFFEF7FF, 0xFF1D1B20, 0xFF49454F,
-                0xFFF3EDF7, 0xFFECE6F0,
+                0xFFECE6F0,
                 0xFF6750A4, 0xFFFFFFFF, 0xFFEADDFF, 0xFF21005D,
-                0xFF79747E);
+                0xFF79747E,
+                LIGHT_ERROR, LIGHT_ON_ERROR, LIGHT_ERROR_CONTAINER, LIGHT_ON_ERROR_CONTAINER);
+    }
+
+    // ------------------------------------------------------------- helpers
+
+    /** Mixes two opaque colours; {@code t} is the weight of {@code b}. */
+    private static int mix(int a, int b, float t) {
+        int red = Math.round(Color.red(a) + (Color.red(b) - Color.red(a)) * t);
+        int green = Math.round(Color.green(a) + (Color.green(b) - Color.green(a)) * t);
+        int blue = Math.round(Color.blue(a) + (Color.blue(b) - Color.blue(a)) * t);
+        return Color.rgb(red, green, blue);
+    }
+
+    /** Rotates the accent into the next hue family and lifts its saturation. */
+    private static int shiftHue(int color) {
+        float[] hsv = new float[3];
+        Color.colorToHSV(color, hsv);
+        hsv[0] = (hsv[0] + 55f) % 360f;
+        hsv[1] = Math.min(1f, hsv[1] * 1.35f + 0.08f);
+        hsv[2] = Math.min(1f, hsv[2] + 0.06f);
+        return Color.HSVToColor(hsv);
+    }
+
+    /** Near-black or white, whichever keeps enough contrast on {@code background}. */
+    private static int readableOn(int background) {
+        double luminance = (0.2126 * Color.red(background)
+                + 0.7152 * Color.green(background)
+                + 0.0722 * Color.blue(background)) / 255.0;
+        return luminance > 0.55 ? 0xFF1A1A1A : 0xFFFFFFFF;
     }
 }

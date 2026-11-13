@@ -59,11 +59,6 @@ public final class SettingsEntry {
         root.addView(buildRow(context, activity),
                 rowParams(context));
 
-        View divider = new View(context);
-        divider.setBackgroundColor(withAlpha(Palette.of(context, isDark(context)).outline, 0.5f));
-        root.addView(divider, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(context, 1))));
-
         LinearLayout.LayoutParams content = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1.0f);
         compose.setLayoutParams(content);
@@ -110,22 +105,38 @@ public final class SettingsEntry {
         int titleColor = palette.onSurface;
         int subtitleColor = palette.onSurfaceVariant;
         int arrowColor = palette.onSurfaceVariant;
-        int rippleColor = withAlpha(palette.primary, 0.32f);
+        int rippleColor = withAlpha(palette.primary, 0.20f);
 
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(context, 20), dp(context, 14), dp(context, 16), dp(context, 14));
+        row.setPadding(dp(context, 16), dp(context, 16), dp(context, 16), dp(context, 16));
         GradientDrawable fill = new GradientDrawable();
         fill.setColor(background);
-        fill.setCornerRadius(dp(context, 24));
+        fill.setCornerRadius(dp(context, 28));
         GradientDrawable mask = new GradientDrawable();
         mask.setColor(0xFFFFFFFF);
-        mask.setCornerRadius(dp(context, 24));
+        mask.setCornerRadius(dp(context, 28));
         row.setBackground(new RippleDrawable(
                 ColorStateList.valueOf(rippleColor), fill, mask));
         row.setClickable(true);
         row.setFocusable(true);
+
+        // Expressive monogram, matching the category cards of the mod screen.
+        TextView monogram = new TextView(context);
+        monogram.setText("O");
+        monogram.setTextSize(18);
+        monogram.setTypeface(Typeface.DEFAULT_BOLD);
+        monogram.setGravity(Gravity.CENTER);
+        monogram.setTextColor(palette.onPrimaryContainer);
+        GradientDrawable disc = new GradientDrawable();
+        disc.setShape(GradientDrawable.OVAL);
+        disc.setColor(palette.primaryContainer);
+        monogram.setBackground(disc);
+        LinearLayout.LayoutParams discParams =
+                new LinearLayout.LayoutParams(dp(context, 48), dp(context, 48));
+        discParams.rightMargin = dp(context, 14);
+        row.addView(monogram, discParams);
 
         LinearLayout labels = new LinearLayout(context);
         labels.setOrientation(LinearLayout.VERTICAL);
@@ -135,21 +146,22 @@ public final class SettingsEntry {
         TextView title = new TextView(context);
         title.setText("Мод OpenCloud");
         title.setTextSize(16);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
+        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         title.setTextColor(titleColor);
         labels.addView(title);
 
         TextView subtitle = new TextView(context);
-        subtitle.setTextSize(13);
+        subtitle.setTextSize(12);
         subtitle.setTextColor(subtitleColor);
-        subtitle.setPadding(0, dp(context, 2), 0, 0);
+        subtitle.setLetterSpacing(0.01f);
+        subtitle.setPadding(0, dp(context, 3), 0, 0);
         subtitle.setText(caption(activity));
         labels.addView(subtitle);
         lastSubtitle = new WeakReference<TextView>(subtitle);
 
         TextView arrow = new TextView(context);
         arrow.setText("\u203A");
-        arrow.setTextSize(26);
+        arrow.setTextSize(24);
         arrow.setTextColor(arrowColor);
         row.addView(arrow);
 
@@ -218,14 +230,11 @@ public final class SettingsEntry {
 
     private static boolean isDark(Context context) {
         try {
-            if (Plugins.darkTheme(context)) {
-                return true;
-            }
+            return ThemePlugin.isDark(context);
         } catch (Throwable ignored) {
-            // Fall through to the system setting.
+            int mode = context.getResources().getConfiguration().uiMode
+                    & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
+            return mode == android.content.res.Configuration.UI_MODE_NIGHT_YES;
         }
-        int mode = context.getResources().getConfiguration().uiMode
-                & android.content.res.Configuration.UI_MODE_NIGHT_MASK;
-        return mode == android.content.res.Configuration.UI_MODE_NIGHT_YES;
     }
 }

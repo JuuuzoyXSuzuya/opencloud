@@ -28,7 +28,6 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Spinner;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -63,6 +62,9 @@ public final class SettingsActivity extends Activity {
     private String page;
 
     private boolean dark;
+    private Palette palette;
+    private Ui ui;
+
     private int colorBg;
     private int colorFg;
     private int colorMuted;
@@ -72,6 +74,17 @@ public final class SettingsActivity extends Activity {
     private int colorAccent;
     private int colorOnAccent;
     private int colorOnCardButton;
+    private int colorSurfaceLow;
+    private int colorSurfaceHigh;
+    private int colorTertiary;
+    private int colorTertiaryContainer;
+    private int colorOnTertiaryContainer;
+    private int colorSecondaryContainer;
+    private int colorOnSecondaryContainer;
+    private int colorOutlineVariant;
+    private int colorError;
+    private int colorErrorContainer;
+    private int colorOnErrorContainer;
 
     @Override
     protected void onCreate(Bundle saved) {
@@ -81,6 +94,7 @@ public final class SettingsActivity extends Activity {
         super.onCreate(saved);
         setTitle("Мод OpenCloud");
         applyPalette();
+        ui = new Ui(this, palette, dark);
         page = saved == null ? null : saved.getString(KEY_PAGE);
 
         int edge = pixels(20);
@@ -120,6 +134,7 @@ public final class SettingsActivity extends Activity {
         frame.addView(column);
         setContentView(frame);
         applyInsets(frame, column, edge);
+        ui.appear(column);
         applySystemBars();
         Fonts.applyTo(frame);
         updateSummary();
@@ -153,62 +168,53 @@ public final class SettingsActivity extends Activity {
         recreate();
     }
 
-    /** Heading, mod badge and the one-paragraph introduction. */
+    /** Expressive hero: display title, mod badge and the one-paragraph intro. */
     private void addHeader(LinearLayout column) {
-        LinearLayout header = new LinearLayout(this);
-        header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
 
-        TextView title = new TextView(this);
-        title.setText("Мод OpenCloud");
-        title.setTextSize(24);
-        title.setLetterSpacing(-0.01f);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setTextColor(colorFg);
-        header.addView(title, new LinearLayout.LayoutParams(
+        top.addView(ui.display("OpenCloud"), new LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
+        top.addView(ui.chip("MOD", colorTertiaryContainer, colorOnTertiaryContainer));
+        column.addView(top, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
 
-        TextView badge = new TextView(this);
-        badge.setText("MOD");
-        badge.setTextSize(11);
-        badge.setTypeface(Typeface.DEFAULT_BOLD);
-        badge.setLetterSpacing(0.14f);
-        badge.setGravity(Gravity.CENTER);
-        badge.setTextColor(colorOnAccent);
-        badge.setPadding(pixels(9), pixels(4), pixels(9), pixels(4));
-        badge.setBackground(shape(colorAccent, 20, 0, 0));
-        header.addView(badge);
-        column.addView(header);
-
-        TextView intro = new TextView(this);
-        intro.setText("Это мод, встроенный в TikTok. Регион, тема, шрифт и плагины "
-                + "меняются внутри самого TikTok — отдельного приложения нет. "
-                + "Выберите раздел ниже.");
-        intro.setTextSize(14);
-        intro.setTextColor(colorMuted);
-        spacing(intro, pixels(6));
+        TextView intro = ui.body("Мод внутри TikTok: регион, тема, шрифт и плагины — "
+                + "без отдельного приложения. Выберите раздел.");
+        intro.setPadding(0, pixels(8), 0, 0);
         column.addView(intro);
 
-        TextView built = new TextView(this);
-        built.setText("Встроен в TikTok " + tiktokVersion());
-        built.setTextSize(12);
-        built.setTextColor(colorMuted);
-        built.setLetterSpacing(0.04f);
-        spacing(built, pixels(4));
-        column.addView(built);
+        LinearLayout facts = new LinearLayout(this);
+        facts.setOrientation(LinearLayout.HORIZONTAL);
+        facts.setGravity(Gravity.CENTER_VERTICAL);
+        facts.setPadding(0, pixels(14), 0, 0);
+
+        TextView built = ui.chip("TikTok " + tiktokVersion(), colorSurfaceHigh, colorFg);
+        LinearLayout.LayoutParams builtParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        builtParams.rightMargin = pixels(8);
+        facts.addView(built, builtParams);
+
+        boolean on = Config.isOn(this);
+        facts.addView(ui.chip(on ? "Профиль включён" : "Профиль выключен",
+                on ? colorSecondaryContainer : colorSurfaceHigh,
+                on ? colorOnSecondaryContainer : colorFg));
+        column.addView(facts);
     }
 
     private void addCategoryRows(LinearLayout column) {
-        column.addView(categoryRow("Внешний вид", appearanceSummary(), PAGE_APPEARANCE),
-                rowParams(pixels(18)));
-        column.addView(categoryRow("Лента", feedSummary(), PAGE_FEED),
-                rowParams(pixels(10)));
-        column.addView(categoryRow("Регион", regionSummary(), PAGE_REGION),
-                rowParams(pixels(10)));
-        column.addView(categoryRow("Плагины .oc", pluginsSummary(), PAGE_PLUGINS),
-                rowParams(pixels(10)));
-        column.addView(categoryRow("Служебное", "Логи, модули сборки и сброс", PAGE_SERVICE),
-                rowParams(pixels(10)));
+        column.addView(categoryRow("В", "Внешний вид", appearanceSummary(), PAGE_APPEARANCE,
+                colorTertiaryContainer, colorOnTertiaryContainer), rowParams(pixels(20)));
+        column.addView(categoryRow("Л", "Лента", feedSummary(), PAGE_FEED,
+                colorSecondaryContainer, colorOnSecondaryContainer), rowParams(pixels(12)));
+        column.addView(categoryRow("Р", "Регион", regionSummary(), PAGE_REGION,
+                colorCardButton, colorOnCardButton), rowParams(pixels(12)));
+        column.addView(categoryRow("П", "Плагины .oc", pluginsSummary(), PAGE_PLUGINS,
+                colorSecondaryContainer, colorOnSecondaryContainer), rowParams(pixels(12)));
+        column.addView(categoryRow("С", "Служебное", "Логи, модули сборки и сброс", PAGE_SERVICE,
+                colorTertiaryContainer, colorOnTertiaryContainer), rowParams(pixels(12)));
     }
 
     private LinearLayout.LayoutParams rowParams(int top) {
@@ -219,18 +225,21 @@ public final class SettingsActivity extends Activity {
         return params;
     }
 
-    private View categoryRow(String title, String hint, final String target) {
+    /**
+     * An expressive category card: monogram, two lines of text and a chevron.
+     * The huge corner radius and the tonal disc are what make the list read as
+     * Material 3 Expressive rather than a plain settings list.
+     */
+    private View categoryRow(String glyph, String title, String hint, final String target,
+                             int discFill, int discInk) {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
-        card.setPadding(pixels(18), pixels(16), pixels(14), pixels(16));
-        GradientDrawable background = new GradientDrawable();
-        background.setColor(colorCard);
-        background.setCornerRadius(pixels(20));
-        card.setBackground(new RippleDrawable(
-                ColorStateList.valueOf(withAlpha(colorOnCardButton, 0.12f)), background, null));
+        card.setPadding(pixels(16), pixels(16), pixels(16), pixels(16));
+        card.setBackground(ui.ripple(colorSurfaceHigh, 28, withAlpha(colorFg, 0.08f)));
         card.setClickable(true);
         card.setFocusable(true);
+        ui.press(card);
         card.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View clicked) {
@@ -238,48 +247,35 @@ public final class SettingsActivity extends Activity {
             }
         });
 
+        card.addView(ui.disc(glyph, discFill, discInk));
+
         LinearLayout text = new LinearLayout(this);
         text.setOrientation(LinearLayout.VERTICAL);
-        TextView name = new TextView(this);
-        name.setText(title);
-        name.setTextSize(17);
-        name.setTypeface(Typeface.DEFAULT_BOLD);
-        name.setTextColor(colorFg);
-        text.addView(name);
-        TextView sub = new TextView(this);
-        sub.setText(hint);
-        sub.setTextSize(13);
-        sub.setTextColor(colorMuted);
+        text.setPadding(pixels(14), 0, pixels(10), 0);
+
+        text.addView(ui.item(title));
+
+        TextView sub = ui.caption(hint);
         sub.setPadding(0, pixels(3), 0, 0);
         text.addView(sub);
+
         card.addView(text, new LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
-
-        TextView chevron = new TextView(this);
-        chevron.setText("›");
-        chevron.setTextSize(26);
-        chevron.setTextColor(colorMuted);
-        chevron.setPadding(pixels(12), 0, pixels(2), 0);
-        card.addView(chevron);
+        card.addView(ui.symbol("›", 26, colorMuted));
         return card;
     }
 
     private void addBack(LinearLayout column) {
-        TextView back = new TextView(this);
-        back.setText("‹  Назад");
-        back.setTextSize(15);
-        back.setTypeface(Typeface.DEFAULT_BOLD);
-        back.setTextColor(colorAccent);
-        back.setPadding(pixels(2), pixels(12), pixels(2), pixels(6));
-        back.setClickable(true);
-        back.setFocusable(true);
-        back.setOnClickListener(new View.OnClickListener() {
+        TextView back = ui.icon("←", new View.OnClickListener() {
             @Override
             public void onClick(View clicked) {
                 closePage();
             }
         });
-        column.addView(back);
+        back.setContentDescription("Назад");
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(pixels(48), pixels(48));
+        params.bottomMargin = pixels(4);
+        column.addView(back, params);
     }
 
     private String appearanceSummary() {
@@ -326,11 +322,8 @@ public final class SettingsActivity extends Activity {
 
         appearance.addView(groupLabel("Тема TikTok"));
 
-        TextView themeIntro = new TextView(this);
-        themeIntro.setText("Принудительный режим оформления TikTok. «Системная» — как в Android.");
-        themeIntro.setTextSize(13);
-        themeIntro.setTextColor(colorMuted);
-        spacing(themeIntro, pixels(2));
+        TextView themeIntro = ui.body("Принудительный режим оформления TikTok. «Системная» — как в Android.");
+        spacing(themeIntro, pixels(4));
         appearance.addView(themeIntro);
 
         int mode = ThemePlugin.forcedMode(this);
@@ -339,48 +332,36 @@ public final class SettingsActivity extends Activity {
         }
         LinearLayout themeRow = new LinearLayout(this);
         themeRow.setOrientation(LinearLayout.HORIZONTAL);
-        spacing(themeRow, pixels(10));
+        themeRow.setPadding(pixels(4), pixels(4), pixels(4), pixels(4));
+        themeRow.setBackground(ui.rounded(colorSurfaceHigh, 24));
+        spacing(themeRow, pixels(12));
         themeRow.addView(themeSegment("Системная", ThemePlugin.FOLLOW_SYSTEM, mode),
-                segmentParams(0));
-        themeRow.addView(themeSegment("Светлая", ThemePlugin.LIGHT, mode),
-                segmentParams(8));
-        themeRow.addView(themeSegment("Тёмная", ThemePlugin.DARK, mode),
-                segmentParams(8));
+                segmentParams());
+        themeRow.addView(themeSegment("Светлая", ThemePlugin.LIGHT, mode), segmentParams());
+        themeRow.addView(themeSegment("Тёмная", ThemePlugin.DARK, mode), segmentParams());
         appearance.addView(themeRow);
 
         appearance.addView(groupLabel("Акцентная тема"));
 
-        TextView accentIntro = new TextView(this);
-        accentIntro.setText("Цвет разделов, переключателей и кнопок этого экрана. "
+        TextView accentIntro = ui.body("Цвет разделов, переключателей и кнопок этого экрана. "
                 + "На оформление самого TikTok не влияет.");
-        accentIntro.setTextSize(13);
-        accentIntro.setTextColor(colorMuted);
-        spacing(accentIntro, pixels(2));
+        spacing(accentIntro, pixels(4));
         appearance.addView(accentIntro);
 
         appearance.addView(accentPicker());
 
-        TextView accentValue = new TextView(this);
-        accentValue.setText("Выбрано: " + Palette.label(Palette.selected(this)));
-        accentValue.setTextSize(13);
-        accentValue.setTextColor(colorMuted);
-        spacing(accentValue, pixels(8));
+        TextView accentValue = ui.caption("Выбрано: " + Palette.label(Palette.selected(this)));
+        spacing(accentValue, pixels(10));
         appearance.addView(accentValue);
 
         appearance.addView(groupLabel("Шрифт"));
 
-        TextView fontIntro = new TextView(this);
-        fontIntro.setText("Системный шрифт или свой файл .ttf/.otf. Мод применяет его сразу, "
+        TextView fontIntro = ui.body("Системный шрифт или свой файл .ttf/.otf. Мод применяет его сразу, "
                 + "TikTok — при включённом переключателе и после перезапуска.");
-        fontIntro.setTextSize(13);
-        fontIntro.setTextColor(colorMuted);
-        spacing(fontIntro, pixels(2));
+        spacing(fontIntro, pixels(4));
         appearance.addView(fontIntro);
 
-        TextView fontValue = new TextView(this);
-        fontValue.setText(Fonts.selectedLabel(this));
-        fontValue.setTextSize(16);
-        fontValue.setTextColor(colorFg);
+        TextView fontValue = ui.title(Fonts.selectedLabel(this));
         fontValue.setPadding(pixels(2), pixels(10), 0, 0);
         appearance.addView(fontValue);
 
@@ -394,17 +375,19 @@ public final class SettingsActivity extends Activity {
         });
         appearance.addView(chooseFont);
 
-        int[][] states = {{android.R.attr.state_checked}, {}};
-        Switch fontSwitch = new Switch(this);
-        fontSwitch.setText("Применять шрифт в TikTok");
-        fontSwitch.setTextSize(16);
-        fontSwitch.setTextColor(colorFg);
+        LinearLayout fontRow = new LinearLayout(this);
+        fontRow.setOrientation(LinearLayout.HORIZONTAL);
+        fontRow.setGravity(Gravity.CENTER_VERTICAL);
+        spacing(fontRow, pixels(12));
+
+        fontRow.addView(ui.item("Применять шрифт в TikTok"),
+                new LinearLayout.LayoutParams(
+                        0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
+
+        final CompoundButton fontSwitch = ui.toggle();
         fontSwitch.setChecked(Plugins.isEnabled(this, Plugins.FONT) && Fonts.isCustom(this));
         fontSwitch.setEnabled(Fonts.isCustom(this));
-        fontSwitch.setThumbTintList(new ColorStateList(states,
-                new int[]{colorAccent, colorStroke}));
-        fontSwitch.setTrackTintList(new ColorStateList(states,
-                new int[]{withAlpha(colorAccent, 0.55f), colorCard}));
+        fontSwitch.setContentDescription("Применять шрифт в TikTok");
         fontSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton button, boolean checked) {
@@ -415,8 +398,8 @@ public final class SettingsActivity extends Activity {
                         Toast.LENGTH_SHORT).show();
             }
         });
-        spacing(fontSwitch, pixels(12));
-        appearance.addView(fontSwitch);
+        fontRow.addView(fontSwitch, new LinearLayout.LayoutParams(pixels(56), pixels(40)));
+        appearance.addView(fontRow);
     }
 
     /* --------------------------------- Лента --------------------------------- */
@@ -424,12 +407,9 @@ public final class SettingsActivity extends Activity {
         LinearLayout feedGroup = group();
         column.addView(feedGroup);
 
-        TextView feedIntro = new TextView(this);
-        feedIntro.setText("Фильтры применяются сразу, без пересборки APK. "
+        TextView feedIntro = ui.body("Фильтры применяются сразу, без пересборки APK. "
                 + "Следующая загрузка ленты будет уже без лишнего.");
-        feedIntro.setTextSize(13);
-        feedIntro.setTextColor(colorMuted);
-        spacing(feedIntro, pixels(2));
+        spacing(feedIntro, pixels(4));
         feedGroup.addView(feedIntro);
 
         Plugins.Descriptor[] plugins = Plugins.all();
@@ -439,7 +419,7 @@ public final class SettingsActivity extends Activity {
                     || Plugins.FONT.equals(plugins[i].id)) {
                 continue; // handled by the theme, accent and font selectors
             }
-            feedGroup.addView(pluginRow(plugins[i]));
+            feedGroup.addView(pluginRow(plugins[i]), blockParams());
         }
     }
 
@@ -448,18 +428,18 @@ public final class SettingsActivity extends Activity {
         LinearLayout regionGroup = group();
         column.addView(regionGroup);
 
-        int[][] states = {{android.R.attr.state_checked}, {}};
-        Switch toggleSwitch = new Switch(this);
-        toggleSwitch.setText("Использовать профиль региона");
-        toggleSwitch.setTextSize(16);
-        toggleSwitch.setTextColor(colorFg);
-        toggleSwitch.setChecked(Config.isOn(this));
-        toggleSwitch.setThumbTintList(new ColorStateList(states,
-                new int[]{colorAccent, colorStroke}));
-        toggleSwitch.setTrackTintList(new ColorStateList(states,
-                new int[]{withAlpha(colorAccent, 0.55f), colorCard}));
-        toggle = toggleSwitch;
-        spacing(toggle, pixels(12));
+        LinearLayout toggleRow = new LinearLayout(this);
+        toggleRow.setOrientation(LinearLayout.HORIZONTAL);
+        toggleRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        toggleRow.addView(ui.item("Использовать профиль региона"),
+                new LinearLayout.LayoutParams(
+                        0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
+
+        final CompoundButton regionSwitch = ui.toggle();
+        regionSwitch.setChecked(Config.isOn(this));
+        regionSwitch.setContentDescription("Использовать профиль региона");
+        toggle = regionSwitch;
         toggle.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton button, boolean checked) {
@@ -467,45 +447,41 @@ public final class SettingsActivity extends Activity {
                 updateSummary();
             }
         });
-        regionGroup.addView(toggle);
+        toggleRow.addView(toggle, new LinearLayout.LayoutParams(pixels(56), pixels(40)));
+        regionGroup.addView(toggleRow, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
 
         LinearLayout card = new LinearLayout(this);
-        card.setOrientation(1);
-        card.setPadding(pixels(16), pixels(16), pixels(16), pixels(16));
-        GradientDrawable background = new GradientDrawable();
-        background.setColor(colorCardButton);
-        background.setCornerRadius(pixels(24));
-        card.setBackground(new RippleDrawable(
-                ColorStateList.valueOf(withAlpha(colorOnCardButton, 0.12f)), background, null));
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(pixels(20), pixels(20), pixels(20), pixels(20));
+        card.setBackground(ui.ripple(colorCardButton, 28,
+                withAlpha(colorOnCardButton, 0.10f)));
         card.setClickable(true);
         card.setFocusable(true);
+        ui.press(card);
         card.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View clicked) {
                 showRegionDialog();
             }
         });
-        spacing(card, pixels(12));
+        spacing(card, pixels(14));
         regionGroup.addView(card);
 
-        TextView cardTitle = new TextView(this);
-        cardTitle.setText("Выбор региона");
-        cardTitle.setTextSize(20);
-        cardTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        TextView cardTitle = ui.title("Выбор региона");
         cardTitle.setTextColor(colorOnCardButton);
         card.addView(cardTitle);
 
-        summary = new TextView(this);
-        summary.setTextSize(14);
+        summary = ui.body("");
+        summary.setTextSize(15);
         summary.setTextColor(colorOnCardButton);
-        summary.setPadding(0, pixels(6), 0, 0);
+        summary.setPadding(0, pixels(8), 0, 0);
         card.addView(summary);
 
-        TextView cardHint = new TextView(this);
-        cardHint.setText("Нажмите, чтобы выбрать страну и оператора.");
-        cardHint.setTextSize(13);
+        TextView cardHint = ui.caption("Нажмите, чтобы выбрать страну и оператора.");
         cardHint.setTextColor(withAlpha(colorOnCardButton, 0.75f));
-        cardHint.setPadding(0, pixels(8), 0, 0);
+        cardHint.setPadding(0, pixels(10), 0, 0);
         card.addView(cardHint);
     }
 
@@ -514,12 +490,9 @@ public final class SettingsActivity extends Activity {
         LinearLayout pluginGroup = group();
         column.addView(pluginGroup);
 
-        TextView customIntro = new TextView(this);
-        customIntro.setText("Файлы .oc: зашифрованные пресеты. Импорт добавляет их в список, "
+        TextView customIntro = ui.body("Файлы .oc: зашифрованные пресеты. Импорт добавляет их в список, "
                 + "применение переключает темы и регион. Формат — docs/plugins.md.");
-        customIntro.setTextSize(13);
-        customIntro.setTextColor(colorMuted);
-        spacing(customIntro, pixels(2));
+        spacing(customIntro, pixels(4));
         pluginGroup.addView(customIntro);
 
         TextView importButton = accentButton("Импортировать .oc");
@@ -552,15 +525,14 @@ public final class SettingsActivity extends Activity {
 
         List<PluginStore.Plugin> custom = PluginStore.installed(this);
         if (custom.isEmpty()) {
-            TextView empty = new TextView(this);
-            empty.setText("Пока ничего не импортировано.");
-            empty.setTextSize(13);
-            empty.setTextColor(colorMuted);
-            spacing(empty, pixels(14));
+            TextView empty = ui.body("Пока ничего не импортировано.");
+            spacing(empty, pixels(16));
             pluginGroup.addView(empty);
         } else {
             for (int i = 0; i < custom.size(); i++) {
-                pluginGroup.addView(customPluginRow(custom.get(i)));
+                LinearLayout.LayoutParams params = blockParams();
+                params.topMargin = pixels(12);
+                pluginGroup.addView(customPluginRow(custom.get(i)), params);
             }
         }
     }
@@ -570,11 +542,8 @@ public final class SettingsActivity extends Activity {
         LinearLayout serviceGroup = group();
         column.addView(serviceGroup);
 
-        TextView note = new TextView(this);
-        note.setText("Профиль читается при каждом вызове, поэтому следующая проверка телефонии уже "
-                + "использует новые значения. Если TikTok показывает старое — закройте и откройте его.");
-        note.setTextSize(13);
-        note.setTextColor(colorMuted);
+        TextView note = ui.body("Профиль читается при каждом вызове, поэтому следующая проверка телефонии "
+                + "уже использует новые значения. Если TikTok показывает старое — закройте и откройте его.");
         spacing(note, pixels(14));
         serviceGroup.addView(note);
 
@@ -593,10 +562,10 @@ public final class SettingsActivity extends Activity {
             if (plugins[i].runtime) {
                 continue;
             }
-            serviceGroup.addView(pluginRow(plugins[i]));
+            serviceGroup.addView(pluginRow(plugins[i]), blockParams());
         }
 
-        TextView reset = outlineButton("Сбросить настройки мода");
+        TextView reset = ui.danger("Сбросить настройки мода", null);
         spacing(reset, pixels(16));
         reset.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -638,7 +607,7 @@ public final class SettingsActivity extends Activity {
     }
 
     private void applyPalette() {
-        Palette palette = Palette.of(this, dark);
+        palette = Palette.of(this, dark);
         colorBg = palette.surface;
         colorFg = palette.onSurface;
         colorMuted = palette.onSurfaceVariant;
@@ -648,6 +617,17 @@ public final class SettingsActivity extends Activity {
         colorAccent = palette.primary;
         colorOnAccent = palette.onPrimary;
         colorOnCardButton = palette.onPrimaryContainer;
+        colorSurfaceLow = palette.surfaceContainerLow;
+        colorSurfaceHigh = palette.surfaceContainerHigh;
+        colorTertiary = palette.tertiary;
+        colorTertiaryContainer = palette.tertiaryContainer;
+        colorOnTertiaryContainer = palette.onTertiaryContainer;
+        colorSecondaryContainer = palette.secondaryContainer;
+        colorOnSecondaryContainer = palette.onSecondaryContainer;
+        colorOutlineVariant = palette.outlineVariant;
+        colorError = palette.error;
+        colorErrorContainer = palette.errorContainer;
+        colorOnErrorContainer = palette.onErrorContainer;
     }
 
     private int withAlpha(int color, float alpha) {
@@ -658,23 +638,15 @@ public final class SettingsActivity extends Activity {
     private LinearLayout category(String label, String hint) {
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.VERTICAL);
-        head.setPadding(pixels(4), 0, pixels(4), 0);
+        head.setPadding(pixels(2), 0, pixels(2), 0);
 
-        TextView title = new TextView(this);
-        title.setText(label);
-        title.setTextSize(18);
-        title.setTypeface(Typeface.DEFAULT_BOLD);
-        title.setTextColor(colorFg);
-        head.addView(title);
+        head.addView(ui.headline(label));
 
-        TextView sub = new TextView(this);
-        sub.setText(hint);
-        sub.setTextSize(13);
-        sub.setTextColor(colorMuted);
-        sub.setPadding(0, pixels(2), 0, 0);
+        TextView sub = ui.body(hint);
+        sub.setPadding(0, pixels(6), 0, 0);
         head.addView(sub);
 
-        spacing(head, pixels(24));
+        spacing(head, pixels(18));
         return head;
     }
 
@@ -682,23 +654,15 @@ public final class SettingsActivity extends Activity {
     private LinearLayout group() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(pixels(16), pixels(4), pixels(16), pixels(16));
-        GradientDrawable background = new GradientDrawable();
-        background.setColor(colorCard);
-        background.setCornerRadius(pixels(24));
-        card.setBackground(background);
+        card.setPadding(pixels(18), pixels(10), pixels(18), pixels(18));
+        card.setBackground(ui.rounded(colorSurfaceLow, 28));
         spacing(card, pixels(10));
         return card;
     }
 
     private TextView groupLabel(String text) {
-        TextView view = new TextView(this);
-        view.setText(text);
-        view.setTextSize(14);
-        view.setTypeface(Typeface.DEFAULT_BOLD);
-        view.setTextColor(colorFg);
-        view.setLetterSpacing(0.01f);
-        spacing(view, pixels(16));
+        TextView view = ui.label(text);
+        spacing(view, pixels(18));
         return view;
     }
 
@@ -715,14 +679,13 @@ public final class SettingsActivity extends Activity {
             if (i % 5 == 0) {
                 row = new LinearLayout(this);
                 row.setOrientation(LinearLayout.HORIZONTAL);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT);
                 if (i > 0) {
-                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                            LinearLayout.LayoutParams.WRAP_CONTENT);
-                    params.topMargin = pixels(10);
-                    row.setLayoutParams(params);
+                    params.topMargin = pixels(12);
                 }
-                block.addView(row);
+                block.addView(row, params);
             }
             row.addView(accentSwatch(keys[i], keys[i].equals(current)));
         }
@@ -730,34 +693,45 @@ public final class SettingsActivity extends Activity {
     }
 
     private View accentSwatch(final String key, boolean selected) {
-        int size = pixels(46);
+        int size = pixels(48);
+        int fillColor = Palette.accentPreview(this, key, dark);
+
         FrameLayout holder = new FrameLayout(this);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(size, size);
-        params.rightMargin = pixels(10);
+        params.rightMargin = pixels(8);
         holder.setLayoutParams(params);
         holder.setClickable(true);
         holder.setFocusable(true);
+        ui.press(holder);
 
         GradientDrawable ring = new GradientDrawable();
         ring.setShape(GradientDrawable.OVAL);
         ring.setColor(0x00000000);
         ring.setStroke(pixels(selected ? 3 : 1),
-                selected ? colorFg : withAlpha(colorStroke, 0.45f));
+                selected ? colorFg : withAlpha(colorOutlineVariant, 0.9f));
         View ringView = new View(this);
         ringView.setBackground(ring);
         holder.addView(ringView, new FrameLayout.LayoutParams(size, size));
 
         GradientDrawable fill = new GradientDrawable();
         fill.setShape(GradientDrawable.OVAL);
-        fill.setColor(Palette.accentPreview(this, key, dark));
+        fill.setColor(fillColor);
         View dot = new View(this);
-        int inset = pixels(7);
+        int inset = pixels(6);
         FrameLayout.LayoutParams dotParams =
                 new FrameLayout.LayoutParams(size - inset * 2, size - inset * 2);
         dotParams.leftMargin = inset;
         dotParams.topMargin = inset;
         dot.setBackground(fill);
         holder.addView(dot, dotParams);
+
+        if (selected) {
+            TextView check = ui.symbol("✓", 18, Ui.contrastOn(fillColor));
+            FrameLayout.LayoutParams checkParams = new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT);
+            holder.addView(check, checkParams);
+        }
 
         holder.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -771,20 +745,42 @@ public final class SettingsActivity extends Activity {
 
     private View pluginRow(final Plugins.Descriptor plugin) {
         LinearLayout row = new LinearLayout(this);
-        row.setOrientation(1);
-        row.setPadding(0, pixels(10), 0, pixels(4));
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, pixels(12), 0, pixels(12));
+
+        LinearLayout text = new LinearLayout(this);
+        text.setOrientation(LinearLayout.VERTICAL);
 
         if (plugin.runtime) {
-            Switch box = new Switch(this);
-            box.setText(plugin.title);
-            box.setTextSize(16);
-            box.setTextColor(colorFg);
+            text.addView(ui.item(plugin.title));
+        } else {
+            LinearLayout head = new LinearLayout(this);
+            head.setOrientation(LinearLayout.HORIZONTAL);
+            head.setGravity(Gravity.CENTER_VERTICAL);
+            head.addView(ui.item(plugin.title));
+
+            TextView built = ui.chip("встроено", colorSecondaryContainer,
+                    colorOnSecondaryContainer);
+            LinearLayout.LayoutParams chipParams = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
+            chipParams.leftMargin = pixels(8);
+            head.addView(built, chipParams);
+            text.addView(head);
+        }
+
+        TextView description = ui.caption(plugin.description);
+        description.setPadding(0, pixels(4), pixels(10), 0);
+        text.addView(description);
+
+        row.addView(text, new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
+
+        if (plugin.runtime) {
+            final CompoundButton box = ui.toggle();
             box.setChecked(Plugins.isEnabled(this, plugin.id));
-            int[][] states = {{android.R.attr.state_checked}, {}};
-            box.setThumbTintList(new ColorStateList(states,
-                    new int[]{colorAccent, colorStroke}));
-            box.setTrackTintList(new ColorStateList(states,
-                    new int[]{withAlpha(colorAccent, 0.55f), colorCard}));
+            box.setContentDescription(plugin.title);
             box.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton button, boolean checked) {
@@ -792,75 +788,58 @@ public final class SettingsActivity extends Activity {
                     if (Plugins.DARK_THEME.equals(plugin.id)) {
                         ThemePlugin.refresh();
                     }
-                    recreate();
                 }
             });
-            row.addView(box);
-        } else {
-            TextView label = new TextView(this);
-            label.setText(plugin.title + "  ✓");
-            label.setTextSize(16);
-            label.setTypeface(Typeface.DEFAULT_BOLD);
-            label.setTextColor(colorFg);
-            row.addView(label);
+            row.addView(box, new LinearLayout.LayoutParams(pixels(56), pixels(40)));
         }
-
-        TextView description = new TextView(this);
-        description.setText(plugin.description);
-        description.setTextSize(13);
-        description.setTextColor(colorMuted);
-        description.setPadding(pixels(2), 0, 0, 0);
-        row.addView(description);
         return row;
     }
 
     private View customPluginRow(final PluginStore.Plugin plugin) {
         LinearLayout card = new LinearLayout(this);
-        card.setOrientation(1);
-        card.setPadding(pixels(14), pixels(14), pixels(14), pixels(14));
-        GradientDrawable background = new GradientDrawable();
-        background.setColor(colorCard);
-        background.setCornerRadius(pixels(20));
-        card.setBackground(background);
-        spacing(card, pixels(12));
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(pixels(18), pixels(18), pixels(18), pixels(18));
+        card.setBackground(ui.rounded(colorSurfaceHigh, 28));
 
-        TextView name = new TextView(this);
-        name.setText(plugin.name + "   v" + plugin.version);
-        name.setTextSize(16);
-        name.setTypeface(Typeface.DEFAULT_BOLD);
-        name.setTextColor(colorFg);
-        card.addView(name);
+        card.addView(ui.item(plugin.name));
+
+        LinearLayout meta = new LinearLayout(this);
+        meta.setOrientation(LinearLayout.HORIZONTAL);
+        meta.setGravity(Gravity.CENTER_VERTICAL);
+        meta.setPadding(0, pixels(8), 0, 0);
+
+        meta.addView(ui.chip("v" + plugin.version, colorSurfaceLow, colorMuted));
+        TextView actions = ui.chip("действий: " + plugin.actions.length(),
+                colorSurfaceLow, colorMuted);
+        LinearLayout.LayoutParams actionsParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        actionsParams.leftMargin = pixels(8);
+        meta.addView(actions, actionsParams);
+        card.addView(meta);
 
         if (plugin.author.length() > 0) {
-            TextView author = new TextView(this);
-            author.setText(plugin.author);
-            author.setTextSize(12);
-            author.setTextColor(colorAccent);
-            author.setPadding(0, pixels(2), 0, 0);
+            TextView author = ui.caption(plugin.author);
+            author.setTextColor(colorTertiary);
+            author.setPadding(0, pixels(8), 0, 0);
             card.addView(author);
         }
 
-        TextView description = new TextView(this);
-        description.setText(plugin.description);
-        description.setTextSize(13);
+        TextView description = ui.body(plugin.description);
         description.setTextColor(colorMuted);
-        description.setPadding(0, pixels(6), 0, 0);
+        description.setPadding(0, pixels(8), 0, 0);
         card.addView(description);
 
-        TextView meta = new TextView(this);
-        meta.setText("id: " + plugin.id + " • действий: " + plugin.actions.length());
-        meta.setTextSize(11);
-        meta.setTextColor(colorMuted);
-        meta.setPadding(0, pixels(6), 0, 0);
-        card.addView(meta);
+        TextView id = ui.caption("id: " + plugin.id);
+        id.setPadding(0, pixels(6), 0, 0);
+        card.addView(id);
 
         LinearLayout buttons = new LinearLayout(this);
         buttons.setOrientation(LinearLayout.HORIZONTAL);
         buttons.setGravity(Gravity.CENTER_VERTICAL);
-        spacing(buttons, pixels(12));
+        spacing(buttons, pixels(14));
 
-        TextView apply = accentButton("Применить");
-        apply.setOnClickListener(new View.OnClickListener() {
+        TextView applyButton = ui.filled("Применить", new View.OnClickListener() {
             @Override
             public void onClick(View clicked) {
                 int applied = PluginStore.apply(SettingsActivity.this, plugin);
@@ -869,14 +848,10 @@ public final class SettingsActivity extends Activity {
                 recreate();
             }
         });
-        buttons.addView(apply, new LinearLayout.LayoutParams(
+        buttons.addView(applyButton, new LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
 
-        TextView delete = outlineButton("Удалить");
-        LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
-        deleteParams.leftMargin = pixels(10);
-        delete.setOnClickListener(new View.OnClickListener() {
+        TextView delete = ui.danger("Удалить", new View.OnClickListener() {
             @Override
             public void onClick(View clicked) {
                 PluginStore.delete(SettingsActivity.this, plugin);
@@ -885,37 +860,40 @@ public final class SettingsActivity extends Activity {
                 recreate();
             }
         });
+        LinearLayout.LayoutParams deleteParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
+        deleteParams.leftMargin = pixels(10);
         buttons.addView(delete, deleteParams);
         card.addView(buttons);
         return card;
     }
 
-    private LinearLayout.LayoutParams segmentParams(int leftMargin) {
-        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+    private LinearLayout.LayoutParams blockParams() {
+        return new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+    }
+
+    private LinearLayout.LayoutParams segmentParams() {
+        return new LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f);
-        params.leftMargin = pixels(leftMargin);
-        return params;
     }
 
     private TextView themeSegment(String label, final int value, int current) {
         boolean selected = value == current;
-        TextView button = new TextView(this);
-        button.setText(label);
-        button.setTextSize(14);
-        button.setTypeface(Typeface.DEFAULT_BOLD);
-        button.setGravity(Gravity.CENTER);
+        TextView button = ui.symbol(label, 14, selected ? colorOnAccent : colorFg);
+        button.setTypeface(Ui.MEDIUM);
         button.setPadding(pixels(8), pixels(12), pixels(8), pixels(12));
         if (selected) {
-            button.setTextColor(colorOnCardButton);
-            button.setBackground(ripple(colorCardButton, 20, 0, 0,
-                    withAlpha(colorOnCardButton, 0.20f)));
+            button.setBackground(ui.ripple(colorAccent, 20,
+                    withAlpha(colorOnAccent, 0.20f)));
         } else {
-            button.setTextColor(colorFg);
-            button.setBackground(ripple(0x00000000, 20, 1, colorStroke,
-                    withAlpha(colorAccent, 0.12f)));
+            button.setBackground(ui.ripple(0x00000000, 20,
+                    withAlpha(colorFg, 0.08f)));
         }
         button.setClickable(true);
         button.setFocusable(true);
+        ui.press(button);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View clicked) {
@@ -945,32 +923,11 @@ public final class SettingsActivity extends Activity {
     }
 
     private TextView accentButton(String label) {
-        TextView button = new TextView(this);
-        button.setText(label);
-        button.setTextSize(15);
-        button.setTypeface(Typeface.DEFAULT_BOLD);
-        button.setGravity(Gravity.CENTER);
-        button.setPadding(pixels(24), pixels(14), pixels(24), pixels(14));
-        button.setTextColor(colorOnAccent);
-        button.setBackground(ripple(colorAccent, 20, 0, 0, withAlpha(colorOnAccent, 0.20f)));
-        button.setClickable(true);
-        button.setFocusable(true);
-        return button;
+        return ui.filled(label, null);
     }
 
     private TextView outlineButton(String label) {
-        TextView button = new TextView(this);
-        button.setText(label);
-        button.setTextSize(15);
-        button.setTypeface(Typeface.DEFAULT_BOLD);
-        button.setGravity(Gravity.CENTER);
-        button.setPadding(pixels(24), pixels(14), pixels(24), pixels(14));
-        button.setTextColor(colorOnCardButton);
-        button.setBackground(ripple(colorCardButton, 20, 0, 0,
-                withAlpha(colorOnCardButton, 0.20f)));
-        button.setClickable(true);
-        button.setFocusable(true);
-        return button;
+        return ui.outlined(label, null);
     }
 
     @Override
@@ -1129,7 +1086,7 @@ public final class SettingsActivity extends Activity {
             }
         });
         builder.setNegativeButton("Отмена", null);
-        builder.show();
+        ui.styleDialog(builder.show());
     }
 
     /**
@@ -1353,7 +1310,7 @@ public final class SettingsActivity extends Activity {
             }
         });
         builder.setNegativeButton("Отмена", null);
-        builder.show();
+        ui.styleDialog(builder.show());
     }
 
     private void showLogsDialog() {
@@ -1384,9 +1341,11 @@ public final class SettingsActivity extends Activity {
             }
         });
         content.addView(save);
-        content.addView(scroll);
+        content.addView(scroll, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
 
-        new AlertDialog.Builder(this,
+        AlertDialog dialog = new AlertDialog.Builder(this,
                 dark ? android.R.style.Theme_DeviceDefault_Dialog_Alert
                         : android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
                 .setTitle("Логи")
@@ -1414,6 +1373,7 @@ public final class SettingsActivity extends Activity {
                 })
                 .setNegativeButton("Закрыть", null)
                 .show();
+        ui.styleDialog(dialog);
     }
 
     private void showFontDialog() {
@@ -1475,6 +1435,7 @@ public final class SettingsActivity extends Activity {
         holder[0] = dialog;
         Fonts.applyTo(content);
         dialog.show();
+        ui.styleDialog(dialog);
     }
 
     private void addFontRow(LinearLayout list, final String label, final String path,

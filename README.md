@@ -45,12 +45,16 @@ TikTok first, then install the OpenCloud build. A second launcher icon named
   system is in light mode. Region spoofing is exposed there as well; the Google
   browser login and the TikTok settings row are shown as build-time modules.
 
-The screen uses a hand-built **Material 3** scheme (tonal roles, filled and
-tonal buttons, rounded cards, switches, ripple feedback). On Android 12+ the
-palette comes from the system Material You tonal palettes, so it follows the
-wallpaper; older devices get the M3 baseline light/dark scheme. The region
-dialog has a country search field. It still needs no extra resources and
-follows the dark-theme plugin.
+The screen follows the **Material 3 Expressive** language, hand-built from
+framework views: a wide shape scale (28 dp cards, pill buttons, round icon
+buttons), a display/title/body type ramp, tonal category discs, segmented
+theme control, a custom switch whose thumb grows and overshoots as it travels,
+press feedback with a spring back and dialogs with rounded surfaces. On
+Android 12+ the palette comes from the system Material You tonal palettes, so
+it follows the wallpaper; older devices get an M3 baseline light/dark scheme.
+Secondary and tertiary containers are derived from the accent, so all ten
+accents stay coherent. The region dialog has a country search field. It still
+needs no extra resources and follows the dark-theme plugin.
 
 The **"Шрифт"** section keeps the system font, offers every font installed in
 `/system/fonts`, and can import a custom `.ttf`/`.otf`. The selection applies
