@@ -12,8 +12,8 @@ import java.lang.reflect.Method;
  * While the switch is on the view is asked to always show the bar.</p>
  */
 public final class Seekbar {
-    /** The value the view understands as "always show". */
-    private static final int SHOW = 1;
+    /** The value the view understands as "always show": zero. */
+    private static final int SHOW = 0;
 
     private Seekbar() {
     }
