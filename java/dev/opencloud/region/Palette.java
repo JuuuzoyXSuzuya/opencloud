@@ -166,6 +166,15 @@ final class Palette {
                 .apply();
     }
 
+    /** Raw colour the TikTok repaint targets; "system" falls back to mint. */
+    static int tiktokAccent(Context context) {
+        int index = indexOf(selected(context));
+        if (index <= 0) {
+            return 0xFF8DD1B0;
+        }
+        return ACCENT_LIGHT[index][0];
+    }
+
     /** Colour of the swatch for {@code key}, independent of the stored choice. */
     static int accentPreview(Context context, String key, boolean dark) {
         int index = indexOf(key);

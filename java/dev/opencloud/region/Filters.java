@@ -9,10 +9,10 @@ import java.util.List;
  * Runtime content filters, called from TikTok code rewritten by the build.
  *
  * {@link #filterFeed(Object)} is prepended to
- * {@code FeedItemList.getItems()}: it drops advertising and live-stream items
- * from the list before the feed ever sees them.  {@link #hideLiveTab()} is
- * prepended to {@code LiveTabProtocol.enable()}: it makes the "LIVE" top tab
- * disappear.
+ * {@code FeedItemList.getItems()}: it drops advertising, live-stream and
+ * photo posts and anything whose caption names a blocked hashtag.
+ * {@link #hideLiveTab()} is prepended to {@code LiveTabProtocol.enable()}: it
+ * makes the "LIVE" top tab disappear.
  *
  * Everything here is reflective and wrapped in {@code catch (Throwable)} on
  * purpose.  A filter must never be able to crash the app, and TikTok renames
@@ -20,10 +20,10 @@ import java.util.List;
  * keeps the original behaviour.
  */
 public final class Filters {
-    /** Aweme type of a live-stream card. */
-    private static final int TYPE_LIVE = 100;
-    /** Aweme type of an advertising item. */
-    private static final int TYPE_AD = 101;
+    /** TikTok's own number for a live room in the feed. */
+    private static final int TYPE_LIVE = 101;
+    /** TikTok's own flag for a post the server marked as an advert. */
+    private static final String AD_FLAG = "_isAd";
 
     private static Field itemsField;
     private static Class<?> itemsOwner;
@@ -31,8 +31,14 @@ public final class Filters {
     private static Method isAdMethod;
     private static Class<?> isAdOwner;
 
+    private static Field isAdField;
+    private static Class<?> isAdFieldOwner;
+
     private static Method awemeTypeMethod;
     private static Class<?> awemeTypeOwner;
+
+    private static Method photoMethod;
+    private static Class<?> photoOwner;
 
     /** The list instance that has already been checked and needs no rescan. */
     private static Object lastInput;
@@ -44,20 +50,24 @@ public final class Filters {
     }
 
     /**
-     * Removes ads and live cards from a {@code FeedItemList}.
+     * Removes unwanted posts from a {@code FeedItemList}.
      *
-     * The field is rewritten in place where possible, so callers that already
-     * hold the model keep working.  The toggle is read on every call, hence a
-     * switch takes effect on the next feed refresh.
+     * The list is edited where possible, so callers that already hold the model
+     * keep working.  The toggles are read on every call, hence a switch takes
+     * effect on the next feed refresh.
      */
     public static void filterFeed(Object feedItemList) {
         try {
             if (feedItemList == null) {
                 return;
             }
-            boolean ads = Plugins.isEnabled(App.context(), Plugins.NO_ADS);
-            boolean live = Plugins.isEnabled(App.context(), Plugins.NO_LIVE);
-            if (!ads && !live) {
+            android.content.Context context = App.context();
+            boolean ads = Plugins.isEnabled(context, Plugins.NO_ADS);
+            boolean live = Plugins.isEnabled(context, Plugins.NO_LIVE);
+            boolean photos = Plugins.isEnabled(context, Plugins.NO_PHOTOS);
+            List<String> tags = Plugins.isEnabled(context, Plugins.TAG_FILTER)
+                    ? Tags.all(context) : null;
+            if (!ads && !live && !photos && (tags == null || tags.isEmpty())) {
                 return;
             }
             Field field = itemsField(feedItemList.getClass());
@@ -75,36 +85,29 @@ public final class Filters {
             if (items == lastOutput && items.size() == lastSize) {
                 return;
             }
-            ArrayList<Object> kept = new ArrayList<Object>(items.size());
-            for (int index = 0; index < items.size(); index++) {
+            int total = items.size();
+            ArrayList<Object> kept = new ArrayList<Object>(total);
+            for (int index = 0; index < total; index++) {
                 Object item = items.get(index);
-                if (item == null) {
-                    continue;
+                if (!drop(item, ads, live, photos, tags)) {
+                    kept.add(item);
                 }
-                if ((ads && isAd(item)) || (live && isLive(item))) {
-                    continue;
-                }
-                kept.add(item);
             }
-            if (kept.size() == items.size()) {
+            if (kept.size() == total) {
                 lastInput = items;
                 return;
             }
-            int removed = items.size() - kept.size();
-            int total = items.size();
+            int removed = total - kept.size();
             /*
-             * Remove in place: the model may hand this very list to other
+             * Edit in place: the model may hand this very list to other
              * components, and swapping in a plain ArrayList breaks code that
              * relies on the original list type.  If the list rejects removal
-             * the toggle simply does nothing until the next refresh.
+             * the filtered copy is installed instead.
              */
             List raw = items;
             try {
                 for (int index = raw.size() - 1; index >= 0; index--) {
-                    Object item = raw.get(index);
-                    boolean drop = item == null
-                            || (ads && isAd(item)) || (live && isLive(item));
-                    if (drop) {
+                    if (drop(raw.get(index), ads, live, photos, tags)) {
                         raw.remove(index);
                     }
                 }
@@ -128,6 +131,23 @@ public final class Filters {
         }
     }
 
+    private static boolean drop(Object item, boolean ads, boolean live, boolean photos,
+                                List<String> tags) {
+        if (item == null) {
+            return true;
+        }
+        if (live && isLive(item)) {
+            return true; // a room is neither an advert nor a photo
+        }
+        if (ads && isAd(item)) {
+            return true;
+        }
+        if (photos && isPhoto(item)) {
+            return true;
+        }
+        return tags != null && !tags.isEmpty() && Tags.blocks(item, tags);
+    }
+
     private static Field itemsField(Class<?> type) {
         if (itemsField != null && itemsOwner == type) {
             return itemsField;
@@ -143,12 +163,20 @@ public final class Filters {
         }
     }
 
+    /**
+     * Whether the server marked this post as an advert.
+     *
+     * {@code isAd()} alone is not enough: while the advert payload is loading
+     * TikTok leaves it false, and the explicit flag on the model still says
+     * the post is sponsored.
+     */
     private static boolean isAd(Object item) {
         try {
             Class<?> type = item.getClass();
             Method method = isAdMethod;
             if (method == null || isAdOwner != type) {
                 method = type.getMethod("isAd");
+                method.setAccessible(true);
                 isAdMethod = method;
                 isAdOwner = type;
             }
@@ -156,13 +184,41 @@ public final class Filters {
                 return true;
             }
         } catch (Throwable ignored) {
-            // Fall back to the aweme type below.
+            // Fall through to the server flag.
         }
-        return awemeType(item) == TYPE_AD;
+        try {
+            Class<?> type = item.getClass();
+            Field field = isAdField;
+            if (field == null || isAdFieldOwner != type) {
+                field = type.getField(AD_FLAG);
+                field.setAccessible(true);
+                isAdField = field;
+                isAdFieldOwner = type;
+            }
+            return Boolean.TRUE.equals(field.get(item));
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     private static boolean isLive(Object item) {
         return awemeType(item) == TYPE_LIVE;
+    }
+
+    private static boolean isPhoto(Object item) {
+        try {
+            Class<?> type = item.getClass();
+            Method method = photoMethod;
+            if (method == null || photoOwner != type) {
+                method = type.getMethod("getPhotoModeImageInfo");
+                method.setAccessible(true);
+                photoMethod = method;
+                photoOwner = type;
+            }
+            return method.invoke(item) != null;
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     private static int awemeType(Object item) {
@@ -171,6 +227,7 @@ public final class Filters {
             Method method = awemeTypeMethod;
             if (method == null || awemeTypeOwner != type) {
                 method = type.getMethod("getAwemeType");
+                method.setAccessible(true);
                 awemeTypeMethod = method;
                 awemeTypeOwner = type;
             }

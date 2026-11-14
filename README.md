@@ -110,7 +110,14 @@ Runtime plugins available now:
 | Dark theme | Rewrites `LJJIII(int)` on TikTok's central appearance controller (`LX/005C` or `LX/004m`, depending on the release) so every requested mode becomes dark (2). Turning it off restores the mode stored in TikTok's own `sp_dark_mode` preference. |
 | Font | Rewrites `Typeface.create*` and `defaultFromStyle` call sites to the font bridge, which returns the selected system or imported font. Turning it off restores the original typefaces. |
 | No ads | Prepends a filter to `FeedItemList.getItems()` that drops advertising items (`Aweme.isAd()` or aweme type 101) from the feed. |
-| No live | Prepends a guard to `LiveTabProtocol.enable()` that hides the "LIVE" top tab, and drops live-stream items (aweme type 100) from the feed. Restart TikTok after switching it. |
+| No live | Prepends a guard to `LiveTabProtocol.enable()` that hides the "LIVE" top tab, and drops live-stream items (aweme type 101) from the feed. Restart TikTok after switching it. |
+| No photo posts | Drops photo carousels (`Aweme.getPhotoModeImageInfo() != null`) from the feed, leaving videos. Applies to the next feed load. |
+| Hashtag filter | Hides posts whose caption names a blocked hashtag. Matching is on the whole tag, so `cat` does not hide `#category`; the list holds up to 40 tags. |
+| No watermark | Redirects `Video.getDownloadAddr()` to the clean `getDownloadNoWatermarkAddr()` TikTok already models, and answers `isPreventDownload()` with "allowed" on the post and the account. Restart TikTok after switching it. |
+| Unmute | Answers `Music.getMusicStatus()` (and the sibling mute readers when a release still has them) so a track pulled for copyright stays audible. Applies on the next load. |
+| Seek bar | Rewrites `setSeekBarShowType(I)` on any owner to always draw the scrubbing bar on every video. |
+| 120 Hz | Replaces the frame rate TikTok asks its window for with a higher target, so a 120 Hz panel is not capped at 60. Inert on releases that never call `Surface.setFrameRate`. |
+| Repaint TikTok | Rewrites the brand pink wherever the bytecode spells it out (`const -0x1d3ab`) and the colour readers/writers (`getColor`, `setTextColor`, `setBackgroundColor`, `Paint.setColor`, …), moving the pink family onto the selected accent in hue, saturation and value. |
 
 To add a runtime plugin:
 

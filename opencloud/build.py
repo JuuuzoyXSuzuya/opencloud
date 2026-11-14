@@ -149,6 +149,25 @@ def _compile_mod(sdk: toolchain.Sdk, jdk: toolchain.Jdk, work: Path,
     catalog.generate(ROOT / "data" / "countries.tsv", generated, default_country)
     classes = work / "classes"
     classes.mkdir()
+
+    # TikTok's model classes only exist in the apk's dex.  The bridge sources
+    # name a few of them in their signatures (for the return types the verifier
+    # requires), so those are compiled against empty stand-ins that are then
+    # left out of the mod dex: at runtime the real classes resolve the calls.
+    stubs = work / "stubs"
+    stubs.mkdir()
+    stub_sources = sorted((ROOT / "stubs").rglob("*.java"))
+    if stub_sources:
+        toolchain.run([
+            str(jdk.javac),
+            "-encoding", "UTF-8",
+            "-source", "8",
+            "-target", "8",
+            "-Xlint:-options",
+            "-classpath", str(sdk.android_jar),
+            "-d", str(stubs),
+        ] + [str(source) for source in stub_sources])
+
     sources = sorted((ROOT / "java").rglob("*.java")) + sorted(generated.rglob("*.java"))
     if not sources:
         raise BuildError("no Java sources to compile")
@@ -158,7 +177,7 @@ def _compile_mod(sdk: toolchain.Sdk, jdk: toolchain.Jdk, work: Path,
         "-source", "8",
         "-target", "8",
         "-Xlint:-options",
-        "-classpath", str(sdk.android_jar),
+        "-classpath", str(sdk.android_jar) + os.pathsep + str(stubs),
         "-d", str(classes),
     ] + [str(source) for source in sources]
     toolchain.run(command)

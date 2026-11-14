@@ -289,3 +289,65 @@ class PatcherTests(unittest.TestCase):
             self.assertIn("sput p0, LX/005C;->LLJJI:I", text)
             self.assertLess(text.index("ThemePlugin;->mode"), text.index("sput p0"))
             self.assertLess(text.index(".param p0"), text.index("ThemePlugin;->mode"))
+
+    def test_media_calls_land_on_their_bridges(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "smali").mkdir()
+            extra = (
+                "    invoke-virtual {v0}, Lcom/ss/android/ugc/aweme/feed/model/Video;"
+                "->getDownloadAddr()Lcom/ss/android/ugc/aweme/base/model/UrlModel;\n"
+                "    invoke-virtual {p0}, Lcom/ss/android/ugc/aweme/feed/model/Aweme;"
+                "->isPreventDownload()Z\n"
+                "    invoke-virtual {v1}, Lcom/ss/android/ugc/aweme/music/model/Music;"
+                "->getMusicStatus()I\n"
+                "    invoke-virtual {v2, v3, v4}, Landroid/view/Surface;"
+                "->setFrameRate(FI)V\n"
+            )
+            (root / "smali" / "A.smali").write_text(
+                sample() + ".method public static b()V\n    .locals 5\n"
+                + extra + "    return-void\n.end method\n", encoding="utf-8")
+            result = patcher.rewrite(root)
+            text = (root / "smali" / "A.smali").read_text(encoding="utf-8")
+            self.assertIn("Download;->downloadAddr(Lcom/ss/android/ugc/aweme/feed/"
+                          "model/Video;)Lcom/ss/android/ugc/aweme/base/model/UrlModel;", text)
+            self.assertIn("Download;->awemePrevent(Lcom/ss/android/ugc/aweme/feed/"
+                          "model/Aweme;)Z", text)
+            self.assertIn("Sound;->status(Lcom/ss/android/ugc/aweme/music/model/"
+                          "Music;)I", text)
+            self.assertIn("Rate;->rate(Landroid/view/Surface;FI)V", text)
+            self.assertGreaterEqual(result.total, 13)
+
+    def test_seek_bar_hook_matches_an_obfuscated_owner(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "smali").mkdir()
+            (root / "smali" / "A.smali").write_text(
+                sample()
+                + ".method public static b()V\n    .locals 2\n"
+                + "    invoke-virtual {v0, v1}, LX/00ab;->setSeekBarShowType(I)V\n"
+                + "    return-void\n.end method\n", encoding="utf-8")
+            result = patcher.rewrite(root)
+            text = (root / "smali" / "A.smali").read_text(encoding="utf-8")
+            self.assertIn("invoke-static {v0, v1}, Ldev/opencloud/region/"
+                          "Seekbar;->seek(Ljava/lang/Object;I)V", text)
+            self.assertEqual(1, result.counts.get("setSeekBarShowType (any owner) (I)V"))
+
+    def test_brand_pink_and_text_colour_are_rewritten(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / "smali").mkdir()
+            (root / "smali" / "A.smali").write_text(
+                sample()
+                + ".method public static b()V\n    .locals 2\n"
+                + "    const v0, -0x1d3ab\n"
+                + "    invoke-virtual {v1, v0}, Lcom/bytedance/tux/input/"
+                  "TuxTextView;->setTextColor(I)V\n"
+                + "    return-void\n.end method\n", encoding="utf-8")
+            patcher.rewrite(root)
+            text = (root / "smali" / "A.smali").read_text(encoding="utf-8")
+            self.assertIn("invoke-static {}, Ldev/opencloud/region/Accent;->accent()I", text)
+            self.assertIn("move-result v0", text)
+            self.assertNotIn("-0x1d3ab", text)
+            self.assertIn("invoke-static {v1, v0}, Ldev/opencloud/region/Accent;"
+                          "->textColor(Landroid/widget/TextView;I)V", text)

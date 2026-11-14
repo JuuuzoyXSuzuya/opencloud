@@ -287,18 +287,28 @@ public final class SettingsActivity extends Activity {
     }
 
     private String feedSummary() {
-        boolean ads = Plugins.isEnabled(this, Plugins.NO_ADS);
-        boolean live = Plugins.isEnabled(this, Plugins.NO_LIVE);
-        if (ads && live) {
-            return "Без рекламы и эфиров";
+        StringBuilder out = new StringBuilder();
+        appendFilter(out, Plugins.NO_ADS, "без рекламы");
+        appendFilter(out, Plugins.NO_LIVE, "без эфиров");
+        appendFilter(out, Plugins.NO_PHOTOS, "без фото");
+        int tags = Tags.all(this).size();
+        if (Plugins.isEnabled(this, Plugins.TAG_FILTER) && tags > 0) {
+            if (out.length() > 0) {
+                out.append(" · ");
+            }
+            out.append("хэштегов: ").append(tags);
         }
-        if (ads) {
-            return "Без рекламы";
+        return out.length() == 0 ? "Фильтры выключены" : out.toString();
+    }
+
+    private void appendFilter(StringBuilder out, String plugin, String label) {
+        if (!Plugins.isEnabled(this, plugin)) {
+            return;
         }
-        if (live) {
-            return "Без эфиров";
+        if (out.length() > 0) {
+            out.append(" · ");
         }
-        return "Фильтры выключены";
+        out.append(label);
     }
 
     private String regionSummary() {
@@ -421,6 +431,94 @@ public final class SettingsActivity extends Activity {
             }
             feedGroup.addView(pluginRow(plugins[i]), blockParams());
         }
+
+        feedGroup.addView(groupLabel("Хэштеги"));
+
+        TextView tagsHint = ui.body("Посты, в подписи которых есть один из этих хэштегов, "
+                + "не попадают в ленту. Совпадение целое: «кот» не скроет «#котлеты».");
+        tagsHint.setPadding(0, 0, 0, pixels(6));
+        feedGroup.addView(tagsHint);
+
+        List<String> tags = Tags.all(this);
+        if (tags.isEmpty()) {
+            TextView empty = ui.caption("Пока пусто — добавьте первый хэштег.");
+            empty.setPadding(0, pixels(4), 0, pixels(10));
+            feedGroup.addView(empty);
+        } else {
+            for (int i = 0; i < tags.size(); i++) {
+                feedGroup.addView(tagRow(tags.get(i)));
+            }
+            TextView counter = ui.caption("Добавлено " + tags.size() + " из " + Tags.MAX);
+            counter.setPadding(0, pixels(4), 0, pixels(10));
+            feedGroup.addView(counter);
+        }
+
+        TextView addTag = accentButton("Добавить хэштег");
+        spacing(addTag, pixels(12));
+        addTag.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                showTagDialog();
+            }
+        });
+        feedGroup.addView(addTag);
+    }
+
+    private View tagRow(final String tag) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(0, pixels(8), 0, pixels(8));
+        row.addView(ui.item("#" + tag), new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1.0f));
+        row.addView(ui.icon("✕", new View.OnClickListener() {
+            @Override
+            public void onClick(View clicked) {
+                Tags.remove(SettingsActivity.this, tag);
+                recreate();
+            }
+        }));
+        return row;
+    }
+
+    private void showTagDialog() {
+        final EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setTextColor(colorFg);
+        input.setHintTextColor(colorMuted);
+        input.setHint("например, спойлер");
+        int pad = pixels(20);
+        input.setPadding(pad, 0, pad, 0);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this,
+                dark ? android.R.style.Theme_DeviceDefault_Dialog_Alert
+                        : android.R.style.Theme_DeviceDefault_Light_Dialog_Alert);
+        builder.setTitle("Хэштег");
+        builder.setMessage("Без решётки — она добавится сама.");
+        builder.setView(input);
+        builder.setPositiveButton("Добавить", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                String tag = Tags.tidy(input.getText().toString());
+                if (tag.length() == 0) {
+                    return;
+                }
+                if (Tags.add(SettingsActivity.this, tag)) {
+                    if (!Plugins.isEnabled(SettingsActivity.this, Plugins.TAG_FILTER)) {
+                        Plugins.setEnabled(SettingsActivity.this, Plugins.TAG_FILTER, true);
+                    }
+                    Toast.makeText(SettingsActivity.this, "Добавлено: #" + tag,
+                            Toast.LENGTH_SHORT).show();
+                    recreate();
+                } else {
+                    Toast.makeText(SettingsActivity.this,
+                            "Такой хэштег уже есть или список полон",
+                            Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
+        builder.setNegativeButton("Отмена", null);
+        ui.styleDialog(builder.show());
     }
 
     /* --------------------------------- Регион -------------------------------- */

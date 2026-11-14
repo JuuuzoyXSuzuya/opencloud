@@ -13,6 +13,19 @@ PHONE_OWNER = "Landroid/telephony/TelephonyManager;"
 SUBSCRIPTION = "Landroid/telephony/SubscriptionManager;"
 SUBSCRIPTION_INFO = "Landroid/telephony/SubscriptionInfo;"
 HOOKS = "Ldev/opencloud/region/Hooks;"
+DOWNLOAD = "Ldev/opencloud/region/Download;"
+SOUND = "Ldev/opencloud/region/Sound;"
+SEEKBAR = "Ldev/opencloud/region/Seekbar;"
+RATE = "Ldev/opencloud/region/Rate;"
+ACCENT = "Ldev/opencloud/region/Accent;"
+
+# TikTok's own models, real names read out of the apk's method table.
+VIDEO = "Lcom/ss/android/ugc/aweme/feed/model/Video;"
+AWEME = "Lcom/ss/android/ugc/aweme/feed/model/Aweme;"
+USER = "Lcom/ss/android/ugc/aweme/profile/model/User;"
+MUSIC = "Lcom/ss/android/ugc/aweme/music/model/Music;"
+URL_MODEL = "Lcom/ss/android/ugc/aweme/base/model/UrlModel;"
+SURFACE = "Landroid/view/Surface;"
 
 
 @dataclass(frozen=True)
@@ -22,10 +35,16 @@ class InstanceTarget:
     signature: str
     hook: str
     required: bool = False
+    # Optional override of the receiver type in the bridge call; when empty the
+    # receiver keeps the owner's type.  Used where the bridge receives a
+    # subclass typed as its base (e.g. TuxTextView as TextView).
+    receiver: str = ""
+    # The bridge class the call lands in; defaults to the telephony hooks.
+    bridge: str = HOOKS
 
     @property
     def replacement(self) -> str:
-        return "(" + self.owner + self.signature[1:]
+        return "(" + (self.receiver or self.owner) + self.signature[1:]
 
 
 @dataclass(frozen=True)
@@ -35,6 +54,7 @@ class StaticTarget:
     signature: str
     hook: str
     required: bool = False
+    bridge: str = HOOKS
 
     @property
     def replacement(self) -> str:
@@ -86,6 +106,91 @@ FONT_TARGETS: tuple[StaticTarget, ...] = (
     StaticTarget(TYPEFACE_OWNER, "createFromFile",
                  "(Ljava/lang/String;)Landroid/graphics/Typeface;", "typefaceFromFile"),
 )
+
+
+# TikTok's own models, answered by the mod: the download address and its bans,
+# the sound's four mute readers, and the frame rate the window is asked for.
+# The model receivers keep their exact type so the verifier accepts the result;
+# the bridge sources compile against empty stand-ins in ../stubs.
+MEDIA_TARGETS: tuple[InstanceTarget, ...] = (
+    InstanceTarget(VIDEO, "getDownloadAddr", "()" + URL_MODEL, "downloadAddr",
+                   bridge=DOWNLOAD),
+    InstanceTarget(AWEME, "isPreventDownload", "()Z", "awemePrevent",
+                   bridge=DOWNLOAD),
+    InstanceTarget(USER, "isPreventDownload", "()Z", "userPrevent",
+                   bridge=DOWNLOAD),
+    InstanceTarget(MUSIC, "available", "()Z", "available", bridge=SOUND),
+    InstanceTarget(MUSIC, "getMusicStatus", "()I", "status", bridge=SOUND),
+    InstanceTarget(MUSIC, "isMuteShare", "()Z", "muteShare", bridge=SOUND),
+    InstanceTarget(MUSIC, "getMuteType", "()I", "muteType", bridge=SOUND),
+    InstanceTarget(SURFACE, "setFrameRate", "(FI)V", "rate", bridge=RATE),
+    InstanceTarget(SURFACE, "setFrameRate", "(FII)V", "rateStrat", bridge=RATE),
+)
+
+# The accent: colour readers and writers that land on Accent instead of the
+# framework.  TuxTextView is TikTok's own text view; the bridge receives it as
+# a plain TextView.  None of these are required: a colour hook that matches
+# nothing is simply absent, never a failed build.
+ACCENT_TARGETS: tuple[InstanceTarget, ...] = (
+    InstanceTarget("Landroid/content/res/Resources;", "getColor", "(I)I", "color",
+                   bridge=ACCENT),
+    InstanceTarget("Landroid/content/res/Resources;", "getColor",
+                   "(ILandroid/content/res/Resources$Theme;)I", "colorThemed",
+                   bridge=ACCENT),
+    InstanceTarget("Landroid/content/Context;", "getColor", "(I)I", "colorContext",
+                   bridge=ACCENT),
+    InstanceTarget("Landroid/widget/TextView;", "setTextColor", "(I)V", "textColor",
+                   bridge=ACCENT),
+    InstanceTarget("Lcom/bytedance/tux/input/TuxTextView;", "setTextColor", "(I)V",
+                   "textColor", receiver="Landroid/widget/TextView;", bridge=ACCENT),
+    InstanceTarget("Landroid/view/View;", "setBackgroundColor", "(I)V", "background",
+                   bridge=ACCENT),
+    InstanceTarget("Landroid/view/Window;", "setStatusBarColor", "(I)V", "statusBar",
+                   bridge=ACCENT),
+    InstanceTarget("Landroid/view/Window;", "setNavigationBarColor", "(I)V",
+                   "navigationBar", bridge=ACCENT),
+    InstanceTarget("Landroid/graphics/drawable/GradientDrawable;", "setColor", "(I)V",
+                   "shapeColor", bridge=ACCENT),
+    InstanceTarget("Landroid/graphics/Paint;", "setColor", "(I)V", "paintColor",
+                   bridge=ACCENT),
+    InstanceTarget("Landroid/graphics/drawable/Drawable;", "setTint", "(I)V", "tint",
+                   bridge=ACCENT),
+    InstanceTarget("Landroid/widget/ImageView;", "setColorFilter", "(I)V",
+                   "colorFilter", bridge=ACCENT),
+)
+
+ACCENT_STATICS: tuple[StaticTarget, ...] = (
+    StaticTarget("Landroid/content/res/ColorStateList;", "valueOf",
+                 "(I)Landroid/content/res/ColorStateList;", "valueOf", bridge=ACCENT),
+)
+
+
+@dataclass(frozen=True)
+class WildTarget:
+    """A method whose name is real but whose owner is obfuscated.
+
+    The owner is matched as "any class"; the receiver arrives at the bridge as
+    a plain Object and the original call is handed back by reflection.  The
+    register count and return type are unchanged, so nothing is renumbered.
+    """
+
+    method: str
+    signature: str
+    hook: str
+    bridge: str
+    required: bool = False
+
+    @property
+    def replacement(self) -> str:
+        return "(Ljava/lang/Object;" + self.signature[1:]
+
+
+WILD_TARGETS: tuple[WildTarget, ...] = (
+    WildTarget("setSeekBarShowType", "(I)V", "seek", SEEKBAR),
+)
+
+# The brand pink as a bytecode constant.  0xFFFE2C55 is -0x1d3ab in smali.
+PINK_LITERAL = "-0x1d3ab"
 
 
 @dataclass(frozen=True)
@@ -331,6 +436,21 @@ def _static_pattern(target: StaticTarget) -> re.Pattern[str]:
     )
 
 
+def _wild_pattern(target: WildTarget) -> re.Pattern[str]:
+    return re.compile(
+        r"(?m)^([ \t]*)invoke-(?:virtual|interface)(/range)?([ \t]+\{[^}]*\},[ \t]*)"
+        + r"L[^;]+;->"
+        + re.escape(target.method)
+        + re.escape(target.signature)
+        + r"[ \t]*\r?$"
+    )
+
+
+_PINK_LITERAL_PATTERN = re.compile(
+    r"(?m)^([ \t]*)const ([vp]\d+), " + re.escape(PINK_LITERAL) + r"[ \t]*\r?$"
+)
+
+
 @dataclass
 class Result:
     counts: dict[str, int]
@@ -351,6 +471,13 @@ def rewrite(root: Path, strict: bool = False, allow_missing: bool = False) -> Re
         raise PatchError("apktool produced no smali directories")
     names = {target.method for target in INSTANCE_TARGETS}
     names.update(target.method for target in STATIC_TARGETS)
+    names.update(target.method for target in MEDIA_TARGETS)
+    names.update(target.method for target in WILD_TARGETS)
+    # Accent rules are gated on their distinctive "owner->method" call form and
+    # the literal pink, never on the very common method names they rewrite.
+    accent_needles = {target.owner + "->" + target.method for target in ACCENT_TARGETS}
+    accent_needles.update(target.owner + "->" + target.method for target in ACCENT_STATICS)
+    accent_needles.add(PINK_LITERAL)
     counts: dict[str, int] = {}
     changed = 0
     changed_dirs: set[str] = set()
@@ -362,28 +489,62 @@ def rewrite(root: Path, strict: bool = False, allow_missing: bool = False) -> Re
             text = path.read_text(encoding="utf-8")
             has_phone = any(name in text for name in names)
             has_font = FONT_OWNER_MARKER in text
-            if not has_phone and not has_font:
+            has_accent = any(needle in text for needle in accent_needles)
+            if not has_phone and not has_font and not has_accent:
                 continue
             previous = text
             if has_phone:
-                for target in INSTANCE_TARGETS:
+                for target in INSTANCE_TARGETS + MEDIA_TARGETS:
                     pattern = _instance_pattern(target)
-                    replacement = r"\1invoke-static\2\3" + HOOKS + "->" + target.hook + target.replacement
+                    replacement = (r"\1invoke-static\2\3" + target.bridge + "->"
+                                   + target.hook + target.replacement)
                     text, hits = pattern.subn(replacement, text)
                     if hits:
                         key = "%s->%s%s" % (target.owner, target.method, target.signature)
                         counts[key] = counts.get(key, 0) + hits
                 for target in STATIC_TARGETS:
                     pattern = _static_pattern(target)
-                    replacement = r"\1invoke-static\2\3" + HOOKS + "->" + target.hook + target.replacement
+                    replacement = (r"\1invoke-static\2\3" + target.bridge + "->"
+                                   + target.hook + target.replacement)
                     text, hits = pattern.subn(replacement, text)
                     if hits:
                         key = "%s->%s%s" % (target.owner, target.method, target.signature)
                         counts[key] = counts.get(key, 0) + hits
+                for target in WILD_TARGETS:
+                    pattern = _wild_pattern(target)
+                    replacement = (r"\1invoke-static\2\3" + target.bridge + "->"
+                                   + target.hook + target.replacement)
+                    text, hits = pattern.subn(replacement, text)
+                    if hits:
+                        key = "%s (any owner) %s" % (target.method, target.signature)
+                        counts[key] = counts.get(key, 0) + hits
             if has_font:
                 for target in FONT_TARGETS:
                     pattern = _static_pattern(target)
-                    replacement = r"\1invoke-static\2\3" + HOOKS + "->" + target.hook + target.replacement
+                    replacement = (r"\1invoke-static\2\3" + target.bridge + "->"
+                                   + target.hook + target.replacement)
+                    text, hits = pattern.subn(replacement, text)
+                    if hits:
+                        key = "%s->%s%s" % (target.owner, target.method, target.signature)
+                        counts[key] = counts.get(key, 0) + hits
+            if has_accent:
+                text, hits = _PINK_LITERAL_PATTERN.subn(
+                    "\\1invoke-static {}, " + ACCENT + "->accent()I\n\n\\1move-result \\2",
+                    text)
+                if hits:
+                    counts["brand pink constant"] = counts.get("brand pink constant", 0) + hits
+                for target in ACCENT_TARGETS:
+                    pattern = _instance_pattern(target)
+                    replacement = (r"\1invoke-static\2\3" + target.bridge + "->"
+                                   + target.hook + target.replacement)
+                    text, hits = pattern.subn(replacement, text)
+                    if hits:
+                        key = "%s->%s%s" % (target.owner, target.method, target.signature)
+                        counts[key] = counts.get(key, 0) + hits
+                for target in ACCENT_STATICS:
+                    pattern = _static_pattern(target)
+                    replacement = (r"\1invoke-static\2\3" + target.bridge + "->"
+                                   + target.hook + target.replacement)
                     text, hits = pattern.subn(replacement, text)
                     if hits:
                         key = "%s->%s%s" % (target.owner, target.method, target.signature)
@@ -476,6 +637,6 @@ def rewrite(root: Path, strict: bool = False, allow_missing: bool = False) -> Re
     if missing and not allow_missing:
         raise PatchError("no call sites matched:\n  " + "\n  ".join(missing))
     if not counts:
-        raise PatchError("no telephony call sites were rewritten; this apk is not supported")
+        raise PatchError("no call sites were rewritten; this apk is not supported")
     return Result(counts, changed, tuple(sorted(changed_dirs)),
                   len(override_names), tuple(sorted(override_names)))
